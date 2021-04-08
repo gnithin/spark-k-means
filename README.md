@@ -30,6 +30,8 @@ export SPARK_DIST_CLASSPATH=$(hadoop classpath)
 2) Explicitly set JAVA_HOME in $HADOOP_HOME/etc/hadoop/hadoop-env.sh:
 export JAVA_HOME=/usr/lib/jvm/java-8-oracle
 
+3) Make a copy of the `.env.example` file into a file called `.env`(in the same location) and then fill in the values. This is so that we share the same makefile for different projects.
+
 Execution
 ---------
 All of the build & execution commands are organized in the Makefile.

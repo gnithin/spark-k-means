@@ -1,9 +1,10 @@
 # Makefile for Spark WordCount project.
+include .env
 
-# Customize these paths for your environment.
+# Customize these pats for your environment.
 # -----------------------------------------------------------
-spark.root=/home/joe/tools/spark/spark-2.3.1-bin-without-hadoop
-hadoop.root=/home/joe/tools/hadoop/hadoop-2.9.1
+spark.root=$(PRIVATE_SPARK_PATH)
+hadoop.root=$(PRIVATE_HADOOP_ROOT)
 app.name=Word Count
 jar.name=spark-demo.jar
 maven.jar.name=spark-demo-1.0.jar
@@ -17,7 +18,7 @@ hdfs.input=input
 hdfs.output=output
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
-aws.bucket.name=mr-median
+aws.bucket.name=$(PRIVATE_AWS_BUCKET_NAME)
 aws.input=input
 aws.output=output
 aws.log.dir=log
@@ -147,4 +148,3 @@ distro:
 	cp README.txt build/deliv/Spark-Demo
 	tar -czf Spark-Demo.tar.gz -C build/deliv Spark-Demo
 	cd build/deliv && zip -rq ../../Spark-Demo.zip Spark-Demo
-	

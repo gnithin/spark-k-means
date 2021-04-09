@@ -1,13 +1,14 @@
 # Makefile for Spark WordCount project.
+include .env
 
-# Customize these paths for your environment.
+# Customize these pats for your environment.
 # -----------------------------------------------------------
-spark.root=/home/joe/tools/spark/spark-2.3.1-bin-without-hadoop
-hadoop.root=/home/joe/tools/hadoop/hadoop-2.9.1
-app.name=Word Count
-jar.name=spark-demo.jar
-maven.jar.name=spark-demo-1.0.jar
-job.name=wc.WordCountMain
+spark.root=$(PRIVATE_SPARK_PATH)
+hadoop.root=$(PRIVATE_HADOOP_ROOT)
+app.name=K Means
+jar.name=kmeans.jar
+maven.jar.name=kmeans-1.0.jar
+job.name=$(PRIVATE_CLASS_NAME)
 local.master=local[4]
 local.input=input
 local.output=output
@@ -17,7 +18,7 @@ hdfs.input=input
 hdfs.output=output
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
-aws.bucket.name=mr-median
+aws.bucket.name=$(PRIVATE_AWS_BUCKET_NAME)
 aws.input=input
 aws.output=output
 aws.log.dir=log
@@ -110,7 +111,7 @@ upload-app-aws:
 # Main EMR launch.
 aws: jar upload-app-aws delete-output-aws
 	aws emr create-cluster \
-		--name "WordCount Spark Cluster" \
+		--name "K Means" \
 		--release-label ${aws.emr.release} \
 		--instance-groups '[{"InstanceCount":${aws.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
 	    --applications Name=Hadoop Name=Spark \
@@ -147,4 +148,3 @@ distro:
 	cp README.txt build/deliv/Spark-Demo
 	tar -czf Spark-Demo.tar.gz -C build/deliv Spark-Demo
 	cd build/deliv && zip -rq ../../Spark-Demo.zip Spark-Demo
-	

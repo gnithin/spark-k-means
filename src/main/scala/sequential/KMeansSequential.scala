@@ -19,6 +19,7 @@ object KMeansSequential {
       .map(word => (word, 1))
       .reduceByKey(_ + _)
 
+    logger.info("***************K Means Sequential*************");
     counts.saveAsTextFile(args(1))
   }
 

@@ -19,6 +19,7 @@ object KMeansDistributed {
       .map(word => (word, 1))
       .reduceByKey(_ + _)
 
+    logger.info("***************K Means Distributed*************");
     counts.saveAsTextFile(args(1))
   }
 

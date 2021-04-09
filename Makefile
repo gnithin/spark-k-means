@@ -5,10 +5,10 @@ include .env
 # -----------------------------------------------------------
 spark.root=$(PRIVATE_SPARK_PATH)
 hadoop.root=$(PRIVATE_HADOOP_ROOT)
-app.name=Word Count
-jar.name=spark-demo.jar
-maven.jar.name=spark-demo-1.0.jar
-job.name=wc.WordCountMain
+app.name=K Means
+jar.name=kmeans.jar
+maven.jar.name=kmeans-1.0.jar
+job.name=sequential.KMeansSequential
 local.master=local[4]
 local.input=input
 local.output=output
@@ -111,7 +111,7 @@ upload-app-aws:
 # Main EMR launch.
 aws: jar upload-app-aws delete-output-aws
 	aws emr create-cluster \
-		--name "WordCount Spark Cluster" \
+		--name "K Means" \
 		--release-label ${aws.emr.release} \
 		--instance-groups '[{"InstanceCount":${aws.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
 	    --applications Name=Hadoop Name=Spark \

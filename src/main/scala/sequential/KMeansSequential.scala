@@ -70,11 +70,8 @@ object KMeansSequential {
 
     var centroidMap: Map[(Double, Double), Vector[(Double, Double)]] = Map()
 
-    // TODO: This needs to be removed
-    var debugIsDone = false
-
     // Loop till convergence (centroids do not change)
-    while (!debugIsDone && !(centroids == prevCentroids)) {
+    while (!(centroids == prevCentroids)) {
       // Reset the map
       centroidMap = Map()
 
@@ -111,19 +108,15 @@ object KMeansSequential {
           (l._1 + r._1, l._2 + r._2)
         })
 
-        // TODO: Should this be an integer always? Double should work too
         val avgPoints = (sumPoints._1 / pointSize, sumPoints._2 / pointSize)
         centroids = centroids :+ avgPoints
       })
 
       println("New centroid list")
       centroids.foreach(println)
-
-      // TODO: Remove this break
-      debugIsDone = true
     }
 
-    // Return list of centroids and their associated points
+    // TODO: Return list of centroids and their associated points
     (k, 1)
   }
 }

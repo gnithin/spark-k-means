@@ -53,7 +53,18 @@ object KMeansSequential {
     )
   }
 
-  def kMeans(k: Int, inputData: Array[(Double, Double)]): Map[(Double, Double), Vector[(Double, Double)]] = {
+  def calculateSSE(kMeansMap: Map[(Double, Double), Vector[(Double, Double)]]): Double = {
+    kMeansMap.map(item => {
+      val center = item._1
+      val valuesList = item._2
+
+      valuesList.map(v =>
+        Math.pow(calculateDistance(v, center), 2)
+      ).sum
+    }).sum
+  }
+
+  def kMeans(k: Int, inputData: Array[(Double, Double)]): (Double, Map[(Double, Double), Vector[(Double, Double)]]) = {
     // Get random centroids
     // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
     // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
@@ -116,6 +127,6 @@ object KMeansSequential {
       println("****** Iteration ends")
     }
 
-    centroidMap
+    (calculateSSE(centroidMap), centroidMap)
   }
 }

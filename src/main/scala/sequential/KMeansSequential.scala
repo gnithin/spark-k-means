@@ -45,16 +45,15 @@ object KMeansSequential {
     kValWithClustersPair.saveAsTextFile(args(1))
   }
 
-  def kMeans(k: Int, inputData: Array[(Double, Double)]): Map[(Double, Double), Vector[(Double, Double)]] = {
-    // TODO: Can this be moved out somehow?
-    val distance: ((Double, Double), (Double, Double)) => Double = (point: (Double, Double), center: (Double, Double)) => {
-      // Square root of - (x2 - x1)^2 - (y2 - y1)^2
-      Math.pow(
-        Math.pow(point._1 - center._1, 2) + Math.pow(point._2 - center._2, 2),
-        0.5
-      )
-    }
+  def calculateDistance(point: (Double, Double), center: (Double, Double)): Double = {
+    // Square root of - (x2 - x1)^2 - (y2 - y1)^2
+    Math.pow(
+      Math.pow(point._1 - center._1, 2) + Math.pow(point._2 - center._2, 2),
+      0.5
+    )
+  }
 
+  def kMeans(k: Int, inputData: Array[(Double, Double)]): Map[(Double, Double), Vector[(Double, Double)]] = {
     // Get random centroids
     // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
     // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
@@ -78,7 +77,7 @@ object KMeansSequential {
       // Assign each input point to a centroid
       inputData.foreach(point => {
         val minCentroidDistancePair = centroids.map(centroid => {
-          (centroid, distance(centroid, point))
+          (centroid, calculateDistance(centroid, point))
         }).minBy(_._2)
         val minCentroid = minCentroidDistancePair._1
 
@@ -93,9 +92,8 @@ object KMeansSequential {
         }
       })
 
-      println("Map")
+      println("----- Map")
       centroidMap.foreach(println)
-      println("******")
 
       // Recalculate centroids
       prevCentroids = centroids
@@ -112,11 +110,12 @@ object KMeansSequential {
         centroids = centroids :+ avgPoints
       })
 
-      println("New centroid list")
+      println("------ New centroid list")
       centroids.foreach(println)
+
+      println("****** Iteration ends")
     }
 
-    // TODO: Return list of centroids and their associated points
     centroidMap
   }
 }

@@ -26,7 +26,7 @@ object KMeansSequential {
 
     // Convert input data into a list
     val inputData = dataFiles.map(line => {
-      val coords = line.split(",").map(v => Integer.parseInt(v))
+      val coords = line.split(",").map(v => v.toDouble)
       (coords(0), coords(1))
     }).collect()
 
@@ -44,9 +44,9 @@ object KMeansSequential {
     // TODO: Write output to file
   }
 
-  def kMeans(k: Int, inputData: Array[(Int, Int)]): (Int, Int) = {
+  def kMeans(k: Int, inputData: Array[(Double, Double)]): (Double, Double) = {
     // TODO: Can this be moved out somehow?
-    val distance: ((Int, Int), (Int, Int)) => Double = (point: (Int, Int), center: (Int, Int)) => {
+    val distance: ((Double, Double), (Double, Double)) => Double = (point: (Double, Double), center: (Double, Double)) => {
       // Square root of - (x2 - x1)^2 - (y2 - y1)^2
       Math.pow(
         Math.pow(point._1 - center._1, 2) + Math.pow(point._2 - center._2, 2),
@@ -63,12 +63,12 @@ object KMeansSequential {
     })
 
     println("Centroids - ")
-    centroids.map(println)
+    centroids.foreach(println)
     println("*****")
 
-    var prevCentroids = Vector[(Int, Int)]()
+    var prevCentroids = Vector[(Double, Double)]()
 
-    var centroidMap: Map[(Int, Int), Vector[(Int, Int)]] = Map()
+    var centroidMap: Map[(Double, Double), Vector[(Double, Double)]] = Map()
 
     // TODO: This needs to be removed
     var debugIsDone = false
@@ -102,7 +102,7 @@ object KMeansSequential {
 
       // Recalculate centroids
       prevCentroids = centroids
-      centroids = Vector[(Int, Int)]()
+      centroids = Vector[(Double, Double)]()
 
       centroidMap.foreach(item => {
         val pointsList = item._2

@@ -58,7 +58,7 @@ object KMeansSequential {
 
     // Get random centroids
     // TODO: Make sure there aren't any repeats
-    var centroids = Array.range(0, k).map(_ => {
+    var centroids = Vector.range(0, k).map(_ => {
       inputData(random.nextInt(inputData.length))
     })
 
@@ -66,7 +66,7 @@ object KMeansSequential {
     centroids.map(println)
     println("*****")
 
-    var prevCentroids = Array[(Int, Int)]()
+    var prevCentroids = Vector[(Int, Int)]()
 
     var centroidMap: Map[(Int, Int), Vector[(Int, Int)]] = Map()
 
@@ -74,7 +74,7 @@ object KMeansSequential {
     var debugIsDone = false
 
     // Loop till convergence (centroids do not change)
-    while (!debugIsDone && !centroids.sameElements(prevCentroids)) {
+    while (!debugIsDone && !(centroids == prevCentroids)) {
       // Reset the map
       centroidMap = Map()
 
@@ -100,8 +100,24 @@ object KMeansSequential {
       centroidMap.foreach(println)
       println("******")
 
-      // TODO: Recalculate centroids
+      // Recalculate centroids
       prevCentroids = centroids
+      centroids = Vector[(Int, Int)]()
+
+      centroidMap.foreach(item => {
+        val pointsList = item._2
+        val pointSize = pointsList.length
+        val sumPoints = pointsList.reduce((l, r) => {
+          (l._1 + r._1, l._2 + r._2)
+        })
+
+        // TODO: Should this be an integer always? Double should work too
+        val avgPoints = (sumPoints._1 / pointSize, sumPoints._2 / pointSize)
+        centroids = centroids :+ avgPoints
+      })
+
+      println("New centroid list")
+      centroids.foreach(println)
 
       // TODO: Remove this break
       debugIsDone = true

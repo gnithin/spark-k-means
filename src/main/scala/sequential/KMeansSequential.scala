@@ -72,6 +72,7 @@ object KMeansSequential {
       .take(k)
       .map(randomIndex => inputData(randomIndex))
 
+    // TODO: Remove this at the end
     println("Centroids - ")
     centroids.foreach(println)
     println("*****")
@@ -103,6 +104,7 @@ object KMeansSequential {
         }
       })
 
+      // TODO: Remove this at the end
       println("----- Map")
       centroidMap.foreach(println)
 
@@ -121,9 +123,9 @@ object KMeansSequential {
         centroids = centroids :+ avgPoints
       })
 
+      // TODO: Remove this at the end
       println("------ New centroid list")
       centroids.foreach(println)
-
       println("****** Iteration ends")
     }
 

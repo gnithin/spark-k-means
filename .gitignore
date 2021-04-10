@@ -6,3 +6,4 @@ output
 target
 *.jar
 spark-demo.iml
+sequential_output

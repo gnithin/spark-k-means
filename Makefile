@@ -11,7 +11,9 @@ maven.jar.name=kmeans-1.0.jar
 job.name=$(PRIVATE_CLASS_NAME)
 local.master=local[4]
 local.input=input
+local.sequential.input=sequential_input
 local.output=output
+local.sequential.output=sequential_output
 # Pseudo-Cluster Execution
 hdfs.user.name=joe
 hdfs.input=input
@@ -34,10 +36,15 @@ jar:
 # Removes local output directory.
 clean-local-output:
 	rm -rf ${local.output}*
+	rm -rf ${local.sequential.output}*
 
 # Runs standalone
 local: jar clean-local-output
 	spark-submit --class ${job.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.input} ${local.output}
+
+# Runs standalone kmeans sequential
+seq-local: jar clean-local-output
+	spark-submit --class ${job.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.sequential.input} ${local.sequential.output}
 
 # Start HDFS
 start-hdfs:

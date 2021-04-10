@@ -59,12 +59,15 @@ object KMeansSequential {
     })
     var prevCentroids = Array[(Int, Int)]()
     var debugIsDone = false
+    var centroidMap: Map[(Int, Int), Vector[(Int, Int)]] = Map()
 
     // Loop till convergence (centroids do not change)
     while (!debugIsDone && !centroids.sameElements(prevCentroids)) {
 
       // Assign points into clusters
-      var centroidMap: Map[(Int, Int), Vector[(Int, Int)]] = Map()
+
+      // Reset the map
+      centroidMap = Map()
 
       inputData.foreach(point => {
         val minCentroidDistancePair = centroids.map(centroid => {

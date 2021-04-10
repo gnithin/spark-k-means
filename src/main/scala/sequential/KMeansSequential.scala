@@ -23,19 +23,30 @@ object KMeansSequential {
     val dataPath = inputPath + File.separator + DATA_DIR
 
     val dataFiles = sc.textFile(dataPath)
-    // TODO: Convert into data structure
 
+    // Convert input data into a list
+    val inputData = dataFiles.map(line => {
+      val coords = line.split(",").map(v => Integer.parseInt(v))
+      (coords(0), coords(1))
+    }).collect()
+
+    // Broadcast input data
+    val broadcastedData = sc.broadcast(inputData)
+
+    // Process config files
     val configFiles = sc.textFile(configPath)
     val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
 
-    val res = kValues.map(kMeans)
+    // Call kmeans on every entry in the config file
+    val res = kValues.map(k => kMeans(k, broadcastedData.value))
     res.collect().foreach(r => logger.info(r))
 
     // TODO: Write output to file
   }
 
-  def kMeans(k: Int): (Int, Int)= {
+  def kMeans(k: Int, inputData: Array[(Int, Int)]): (Int, Int) = {
     // TODO: Add the actual k-means logic here
+    println(s"${inputData(10)}")
     (k, 1)
   }
 }

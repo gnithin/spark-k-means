@@ -11,7 +11,7 @@ object KMeansSequential {
       logger.error("Usage:\n <input dir> <output dir>")
       System.exit(1)
     }
-    val conf = new SparkConf().setAppName("KMeans Sequential")
+    val conf = new SparkConf().setAppName("KMeans Sequential").setMaster("local[4]")
     val sc = new SparkContext(conf)
 
     val textFile = sc.textFile(args(0))

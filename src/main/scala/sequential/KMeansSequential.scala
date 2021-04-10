@@ -54,13 +54,12 @@ object KMeansSequential {
       )
     }
 
-    val random = scala.util.Random
-
     // Get random centroids
-    // TODO: Make sure there aren't any repeats
-    var centroids = Vector.range(0, k).map(_ => {
-      inputData(random.nextInt(inputData.length))
-    })
+    // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
+    // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
+    var centroids = scala.util.Random.shuffle(Vector.range(0, inputData.length))
+      .take(k)
+      .map(randomIndex => inputData(randomIndex))
 
     println("Centroids - ")
     centroids.foreach(println)

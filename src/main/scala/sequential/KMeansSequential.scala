@@ -45,8 +45,54 @@ object KMeansSequential {
   }
 
   def kMeans(k: Int, inputData: Array[(Int, Int)]): (Int, Int) = {
-    // TODO: Add the actual k-means logic here
+    val distance: ((Int, Int), (Int, Int)) => Double = (point: (Int, Int), center: (Int, Int)) => {
+      // Square root of - (x2 - x1)^2 - (y2 - y1)^2
+      Math.pow(
+        Math.pow(point._1 - center._1, 2) + Math.pow(point._2 - center._2, 2),
+        0.5
+      )
+    }
+
+    val random = scala.util.Random
+    var centroids = Array.range(0, k).map(_ => {
+      inputData(random.nextInt(inputData.length))
+    })
+    var prevCentroids = Array[(Int, Int)]()
+    var debugIsDone = false
+
+    // Loop till convergence (centroids do not change)
+    while (!debugIsDone && !centroids.sameElements(prevCentroids)) {
+
+      // Assign points into clusters
+      var centroidMap: Map[(Int, Int), Vector[(Int, Int)]] = Map()
+
+      inputData.foreach(point => {
+        val minCentroidDistancePair = centroids.map(centroid => {
+          (centroid, distance(centroid, point))
+        }).minBy(_._2)
+
+        println(minCentroidDistancePair)
+
+        val minCentroid = minCentroidDistancePair._1
+        if (centroidMap.contains(minCentroid)) {
+          val clusterList = centroidMap(minCentroid)
+          val newClusterList = clusterList :+ point
+          centroidMap += (minCentroid -> newClusterList)
+        } else {
+          val newClusterList = Vector(point)
+          centroidMap += (minCentroid -> newClusterList)
+        }
+      })
+
+      // TODO: Recalculate centroids
+      prevCentroids = centroids
+      // TODO: Remove this break
+      debugIsDone = true
+    }
+
     println(s"${inputData(10)}")
+
+    // Return list of centroids and their associated points
     (k, 1)
   }
 }

@@ -45,6 +45,7 @@ object KMeansSequential {
   }
 
   def kMeans(k: Int, inputData: Array[(Int, Int)]): (Int, Int) = {
+    // TODO: Can this be moved out somehow?
     val distance: ((Int, Int), (Int, Int)) => Double = (point: (Int, Int), center: (Int, Int)) => {
       // Square root of - (x2 - x1)^2 - (y2 - y1)^2
       Math.pow(
@@ -54,46 +55,57 @@ object KMeansSequential {
     }
 
     val random = scala.util.Random
+
+    // Get random centroids
+    // TODO: Make sure there aren't any repeats
     var centroids = Array.range(0, k).map(_ => {
       inputData(random.nextInt(inputData.length))
     })
+
+    println("Centroids - ")
+    centroids.map(println)
+    println("*****")
+
     var prevCentroids = Array[(Int, Int)]()
-    var debugIsDone = false
+
     var centroidMap: Map[(Int, Int), Vector[(Int, Int)]] = Map()
+
+    // TODO: This needs to be removed
+    var debugIsDone = false
 
     // Loop till convergence (centroids do not change)
     while (!debugIsDone && !centroids.sameElements(prevCentroids)) {
-
-      // Assign points into clusters
-
       // Reset the map
       centroidMap = Map()
 
+      // Assign each input point to a centroid
       inputData.foreach(point => {
         val minCentroidDistancePair = centroids.map(centroid => {
           (centroid, distance(centroid, point))
         }).minBy(_._2)
-
-        println(minCentroidDistancePair)
-
         val minCentroid = minCentroidDistancePair._1
+
         if (centroidMap.contains(minCentroid)) {
           val clusterList = centroidMap(minCentroid)
           val newClusterList = clusterList :+ point
           centroidMap += (minCentroid -> newClusterList)
+
         } else {
           val newClusterList = Vector(point)
           centroidMap += (minCentroid -> newClusterList)
         }
       })
 
+      println("Map")
+      centroidMap.foreach(println)
+      println("******")
+
       // TODO: Recalculate centroids
       prevCentroids = centroids
+
       // TODO: Remove this break
       debugIsDone = true
     }
-
-    println(s"${inputData(10)}")
 
     // Return list of centroids and their associated points
     (k, 1)

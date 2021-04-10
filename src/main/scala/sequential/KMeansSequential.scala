@@ -38,13 +38,14 @@ object KMeansSequential {
     val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
 
     // Call kmeans on every entry in the config file
-    val res = kValues.map(k => kMeans(k, broadcastedData.value))
-    res.collect().foreach(r => logger.info(r))
+    val kValWithClustersPair = kValues.map(k => (k, kMeans(k, broadcastedData.value)))
 
-    // TODO: Write output to file
+    // TODO: Can this formatted to something better?
+    // Write output to file
+    kValWithClustersPair.saveAsTextFile(args(1))
   }
 
-  def kMeans(k: Int, inputData: Array[(Double, Double)]): (Double, Double) = {
+  def kMeans(k: Int, inputData: Array[(Double, Double)]): Map[(Double, Double), Vector[(Double, Double)]] = {
     // TODO: Can this be moved out somehow?
     val distance: ((Double, Double), (Double, Double)) => Double = (point: (Double, Double), center: (Double, Double)) => {
       // Square root of - (x2 - x1)^2 - (y2 - y1)^2
@@ -116,6 +117,6 @@ object KMeansSequential {
     }
 
     // TODO: Return list of centroids and their associated points
-    (k, 1)
+    centroidMap
   }
 }

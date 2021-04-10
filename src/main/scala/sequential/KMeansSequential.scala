@@ -1,9 +1,13 @@
 package sequential
 
+import java.io.File
+
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 
 object KMeansSequential {
+  val DATA_DIR = "data";
+  val CONFIG_DIR = "configuration";
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -14,13 +18,24 @@ object KMeansSequential {
     val conf = new SparkConf().setAppName("KMeans Sequential").setMaster("local[4]")
     val sc = new SparkContext(conf)
 
-    val textFile = sc.textFile(args(0))
-    val counts = textFile.flatMap(line => line.split(" "))
-      .map(word => (word, 1))
-      .reduceByKey(_ + _)
+    val inputPath = args(0)
+    val configPath = inputPath + File.separator + CONFIG_DIR
+    val dataPath = inputPath + File.separator + DATA_DIR
 
-    logger.info("***************K Means Sequential*************");
-    counts.saveAsTextFile(args(1))
+    val dataFiles = sc.textFile(dataPath)
+    // TODO: Convert into data structure
+
+    val configFiles = sc.textFile(configPath)
+    val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
+
+    val res = kValues.map(kMeans)
+    res.collect().foreach(r => logger.info(r))
+
+    // TODO: Write output to file
   }
 
+  def kMeans(k: Int): (Int, Int)= {
+    // TODO: Add the actual k-means logic here
+    (k, 1)
+  }
 }

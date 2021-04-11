@@ -43,6 +43,7 @@ object KMeansDistributed {
       if (prevCentroids == centroidsList) {
         println("CONVERGENCE REACHED")
       }
+      prevCentroids = centroidsList
     }
     if (i == maxIterations) {
       println("MAX ITERATIONS REACHED")

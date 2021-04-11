@@ -8,11 +8,13 @@ hadoop.root=$(PRIVATE_HADOOP_ROOT)
 app.name=K Means
 jar.name=kmeans.jar
 maven.jar.name=kmeans-1.0.jar
-job.name=$(PRIVATE_CLASS_NAME)
+job.distributed.name=$(PRIVATE_CLASS_NAME_DISTRIBUTED)
 local.master=local[4]
-local.input=input
+local.distributed.input_centers=distributed_input/centers.txt
+local.distributed.input_data=distributed_input/sample-points.txt
+local.distributed.output=distributed_output
+job.sequential.name=$(PRIVATE_CLASS_NAME_SEQUENTIAL)
 local.sequential.input=sequential_input
-local.output=output
 local.sequential.output=sequential_output
 # Pseudo-Cluster Execution
 hdfs.user.name=joe
@@ -35,7 +37,7 @@ jar:
 
 # Removes local output directory.
 clean-local-output:
-	rm -rf ${local.output}*
+	rm -rf ${local.distributed.output}*
 	rm -rf ${local.sequential.output}*
 
 # Runs standalone
@@ -44,7 +46,12 @@ local: jar clean-local-output
 
 # Runs standalone kmeans sequential
 seq-local: jar clean-local-output
-	spark-submit --class ${job.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.sequential.input} ${local.sequential.output}
+	spark-submit --class ${job.sequential.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.sequential.input} ${local.sequential.output}
+
+# Runs standalone kmeans distributed
+distributed-local: jar clean-local-output
+	spark-submit --class ${job.distributed.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.distributed.input_centers} ${local.distributed.input_data} ${local.distributed.output} ${local.master}
+
 
 # Start HDFS
 start-hdfs:

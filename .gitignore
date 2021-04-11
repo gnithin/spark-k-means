@@ -6,4 +6,6 @@ output
 target
 *.jar
 spark-demo.iml
+kmeans.iml
 sequential_output
+distributed_output

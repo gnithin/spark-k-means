@@ -30,22 +30,27 @@ object KMeansDistributed {
       .toDS()
 
     // currently run for max iterations
-    var i = 0
+    var maxIterationsReached = true
     var prevCentroids = centroidsList
-    for (i <- 0 until maxIterations) {
-      var updatedCenters = samplePointsDS.map(point => (bestCentroid(point, centroidsList), point._1, point._2))
-        .groupBy($"_1")
-        .agg(
-          avg($"_2").as("avg_x"),
-          avg($"_3").as("avg_y")
-        )
-      centroidsList = updatedCenters.select("avg_x", "avg_y").as[(Double, Double)].collect().toList
-      if (prevCentroids == centroidsList) {
-        println("CONVERGENCE REACHED")
+    import scala.util.control.Breaks._
+    breakable {
+      for (i <- 0 until maxIterations) {
+        var updatedCenters = samplePointsDS.map(point => (bestCentroid(point, centroidsList), point._1, point._2))
+          .groupBy($"_1")
+          .agg(
+            avg($"_2").as("avg_x"),
+            avg($"_3").as("avg_y")
+          )
+        centroidsList = updatedCenters.select("avg_x", "avg_y").as[(Double, Double)].collect().toList
+        if (prevCentroids == centroidsList) {
+          println("CONVERGENCE REACHED")
+          maxIterationsReached = false
+          break()
+        }
+        prevCentroids = centroidsList
       }
-      prevCentroids = centroidsList
     }
-    if (i == maxIterations) {
+    if (maxIterationsReached) {
       println("MAX ITERATIONS REACHED")
     }
     spark.sparkContext.parallelize(centroidsList).toDF().coalesce(1).write.csv(args(1))

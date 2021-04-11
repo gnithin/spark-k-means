@@ -8,12 +8,12 @@ hadoop.root=$(PRIVATE_HADOOP_ROOT)
 app.name=K Means
 jar.name=kmeans.jar
 maven.jar.name=kmeans-1.0.jar
-job.distributed.name=$(PRIVATE_CLASS_NAME_DISTRIBUTED)
+job.sequential.name=sequential.KMeansSequential
+job.distributed.name=distributed.KMeansDistributed
 local.master=local[4]
 local.distributed.input_centers=distributed_input/centers.txt
 local.distributed.input_data=distributed_input/sample-points.txt
 local.distributed.output=distributed_output
-job.sequential.name=$(PRIVATE_CLASS_NAME_SEQUENTIAL)
 local.sequential.input=sequential_input
 local.sequential.output=sequential_output
 # Pseudo-Cluster Execution

@@ -13,13 +13,13 @@ object KMeansDistributed {
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
-    if (args.length != 2) {
-      logger.error("Usage:\n <input dir> <output dir>")
+    if (args.length != 4) {
+      logger.error("Usage:\n <input_centers> <input_data> <output dir> <master>")
       System.exit(1)
     }
     val spark = SparkSession.builder()
-      .master("local[4]")
-      .appName("KMeans Sequential")
+      .master(args(3))
+      .appName("KMeans Distributed")
       .getOrCreate()
 
     logger.info("***************K Means Distributed*************");
@@ -28,14 +28,14 @@ object KMeansDistributed {
     // Prepare a list of initial centroids (x,y) coordinates -
     // number of initial centroids in the file depecit the value of K
     // maintaining as a list since k will not be huge and will fit on a single machine.
-    var centroidsList = spark.sparkContext.textFile(args(0) + "/centers.txt")
+    var centroidsList = spark.sparkContext.textFile(args(0))
       .map(point => (point.split(",")(0).toDouble, point.split(",")(1).toDouble))
       .collect()
       .toList
 
     // Prepare a Dataset for the points that need to be assigned to a cluster
     // This dataset is maintained with 2 columns, one for x and the other for y
-    val samplePointsDS = spark.sparkContext.textFile(args(0) + "/sample-points.txt")
+    val samplePointsDS = spark.sparkContext.textFile(args(1))
       .map(point => (point.split(",")(0).toDouble, point.split(",")(1).toDouble))
       .toDS()
 
@@ -66,7 +66,7 @@ object KMeansDistributed {
     }
     // write the new centers back to the file - we use coalesce here so that we get output on a single file
     // this operation is performed only once on a relatively small list
-    spark.sparkContext.parallelize(centroidsList).toDF().coalesce(1).write.csv(args(1))
+    spark.sparkContext.parallelize(centroidsList).toDF().coalesce(1).write.csv(args(2))
   }
 
   /**

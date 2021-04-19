@@ -38,7 +38,17 @@ object FileVectorGenerator {
   }
 
   def parse_input(sc: SparkContext, inputFilePath: String): RDD[(String, String)] = {
-    // Not handling file exception. If it's not there, purposefully fail
+
+    /*
+    NOTE-1: Purposefully using wholeTextFiles instead of textFiles, since the input
+    is XML. In a CSV, since each line is a complete structure, it's fine. In an XML
+    that's not the case, however simple the XML maybe. Not resorting to string
+    manipulation shenanigans to overcome this, since this is a general solution.
+    CAUTION: Remember 2 things -
+    - Each individual file shouldn't be too big. Make sure that it can fit in memory
+    - Strip all the BOM characters in the XML before processing
+     */
+    // NOTE-2: Not handling file exception. If it's not there, purposefully fail
     val dataFiles = sc.wholeTextFiles(inputFilePath)
     // TODO: Can the file-name be used in the id?
     dataFiles.flatMap(v =>

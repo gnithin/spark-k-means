@@ -8,7 +8,6 @@ import org.apache.spark.sql.SparkSession
 
 object FileVectorGenerator {
   def generate_vector(inputFilePath: String, spark: SparkSession): RDD[(String, Seq[Double])] = {
-    // TODO: Does it make sense to read this directly in spark?
     val inputRDD = parse_input(spark.sparkContext, inputFilePath)
 
     // Convert to a data-frame since ML lib support seems good for it

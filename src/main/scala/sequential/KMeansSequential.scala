@@ -2,7 +2,9 @@ package sequential
 
 import java.io.File
 
+import input_processing.FileVectorGenerator
 import org.apache.log4j.LogManager
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 
 object KMeansSequential {
@@ -15,12 +17,24 @@ object KMeansSequential {
       logger.error("Usage:\n <input dir> <output dir>")
       System.exit(1)
     }
-    val conf = new SparkConf().setAppName("KMeans Sequential").setMaster("local[4]")
-    val sc = new SparkContext(conf)
 
     val inputPath = args(0)
     val configPath = inputPath + File.separator + CONFIG_DIR
     val dataPath = inputPath + File.separator + DATA_DIR
+    val outputPath = args(1)
+
+    val spark = SparkSession.builder()
+      .master("local[4]")
+      .appName("parse-input")
+      .getOrCreate()
+
+    val vectorRdd = FileVectorGenerator.generate_vector(dataPath, spark)
+    vectorRdd.saveAsTextFile(outputPath)
+
+    // TODO: The rest needs to be fixed according to the input
+    /*
+    val conf = new SparkConf().setAppName("KMeans Sequential").setMaster("local[4]")
+    val sc = new SparkContext(conf)
 
     val dataFiles = sc.textFile(dataPath)
 
@@ -43,6 +57,7 @@ object KMeansSequential {
     // TODO: Can this formatted to something better?
     // Write output to file
     kValWithClustersPair.saveAsTextFile(args(1))
+     */
   }
 
   def calculateDistance(point: (Double, Double), center: (Double, Double)): Double = {

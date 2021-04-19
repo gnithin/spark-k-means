@@ -11,6 +11,7 @@ import scala.collection.Map
 object KMeansSequential {
   val DATA_DIR = "data";
   val CONFIG_DIR = "configuration";
+
   // TODO: Think about the correct entry
   val MAX_ITERATIONS = 10
 
@@ -47,7 +48,7 @@ object KMeansSequential {
     val kValWithClustersPair = kValues.map(k => (k, kMeans(k, broadcastedData.value)))
 
     // Write output to file
-    kValWithClustersPair.saveAsTextFile(args(1))
+    kValWithClustersPair.saveAsTextFile(outputPath)
   }
 
   def calculateDistance(point: Seq[Double], center: Seq[Double]): Double = {
@@ -158,6 +159,8 @@ object KMeansSequential {
       centroids.foreach(println)
       println("****** Iteration ends")
     }
+
+    println(s"Num iterations $iterations for k - $k")
 
     (calculateSSE(centroidMap), centroidMap)
   }

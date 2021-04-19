@@ -1,7 +1,7 @@
 package input_processing
 
 import org.apache.spark.SparkContext
-import org.apache.spark.ml.feature.{HashingTF, IDF, Tokenizer}
+import org.apache.spark.ml.feature.{HashingTF, IDF, StopWordsRemover, Tokenizer}
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
@@ -13,19 +13,24 @@ object FileVectorGenerator {
     // Convert to a data-frame since ML lib support seems good for it
     val inputDf = spark.createDataFrame(inputRDD).toDF("id", "content")
 
-    // TODO: Remove this
-    inputDf.show()
-    println("*" * 50)
-
+    // Tokenize the words (This also converts everything to lowercase)
     val tokenizer = new Tokenizer().setInputCol("content").setOutputCol("words")
     val wordsData = tokenizer.transform(inputDf)
 
-    // TODO: Remove stop-words
+    // Remove stop-words
+    val remover = new StopWordsRemover()
+      .setInputCol("words")
+      .setOutputCol("filtered_words")
+    val filteredWords = remover.transform(wordsData)
 
-    // TODO: What should the 50 be replaced with? It should be a big number, but what?
+    // TODO: Remove this
+    filteredWords.show()
+    println("*" * 50)
+
+    // TODO: Think about the ideal number of features. It should be the number of words upto a limit (if the number is too big)
     val hashingTF = new HashingTF()
-      .setInputCol("words").setOutputCol("rawFeatures").setNumFeatures(50)
-    val featurizedData = hashingTF.transform(wordsData)
+      .setInputCol("filtered_words").setOutputCol("rawFeatures").setNumFeatures(50)
+    val featurizedData = hashingTF.transform(filteredWords)
 
     val idf = new IDF().setInputCol("rawFeatures").setOutputCol("features")
     val idfModel = idf.fit(featurizedData)

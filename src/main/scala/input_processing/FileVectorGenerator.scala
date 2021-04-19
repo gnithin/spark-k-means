@@ -12,6 +12,8 @@ object FileVectorGenerator {
 
     // Convert to a data-frame since ML lib support seems good for it
     val inputDf = spark.createDataFrame(inputRDD).toDF("id", "content")
+
+    // TODO: Remove this
     inputDf.show()
     println("*" * 50)
 
@@ -38,7 +40,6 @@ object FileVectorGenerator {
   }
 
   def parse_input(sc: SparkContext, inputFilePath: String): RDD[(String, String)] = {
-
     /*
     NOTE-1: Purposefully using wholeTextFiles instead of textFiles, since the input
     is XML. In a CSV, since each line is a complete structure, it's fine. In an XML
@@ -50,19 +51,25 @@ object FileVectorGenerator {
      */
     // NOTE-2: Not handling file exception. If it's not there, purposefully fail
     val dataFiles = sc.wholeTextFiles(inputFilePath)
-    // TODO: Can the file-name be used in the id?
+
     dataFiles.flatMap(v =>
-      xml.XML.loadString(v._2.trim()) \ "row"
-    )
-      .map(row =>
+      (xml.XML.loadString(v._2.trim()) \ "row").map(n => (v._1, n))
+    ).map {
+      case (filePath, row) =>
         (
-          generate_id((row \ "@Id").text, (row \ "@PostTypeId").text),
+          generate_id(
+            filePath,
+            (row \ "@Id").text,
+            (row \ "@PostTypeId").text
+          ),
           (row \ "@Body").text
         )
-      )
+    }
   }
 
-  def generate_id(id: String, postType: String): String = {
-    Array(id, postType).mkString("--")
+  def generate_id(filePath: String, id: String, postType: String): String = {
+    // Get just the name of the file without the extensions
+    val filename = filePath.split("/").last.split('.').head
+    Array(filename, id, postType).mkString("--")
   }
 }

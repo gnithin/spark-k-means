@@ -134,20 +134,25 @@ object KMeansSequential {
       println("----- Map")
       centroidMap.foreach(println)
 
-      //      // Recalculate centroids
-      //      prevCentroids = centroids
-      //      centroids = Vector[(Double, Double)]()
-      //
-      //      centroidMap.foreach(item => {
-      //        val pointsList = item._2
-      //        val pointSize = pointsList.length
-      //        val sumPoints = pointsList.reduce((l, r) => {
-      //          (l._1 + r._1, l._2 + r._2)
-      //        })
-      //
-      //        val avgPoints = (sumPoints._1 / pointSize, sumPoints._2 / pointSize)
-      //        centroids = centroids :+ avgPoints
-      //      })
+      // Recalculate centroids
+      prevCentroids = centroids
+      centroids = Vector[Seq[Double]]()
+      val vectorSize = prevCentroids.head.length
+
+      centroidMap.foreach {
+        case (centroidKey, documentsList) => {
+          // Since the documentsList are of equal size, we can avg them out
+          var avgCentroid = Vector.fill[Double](vectorSize)(0.0)
+          val documentVectorsList = documentsList.map(d => d._2)
+          val numberOfDocuments = documentVectorsList.length
+
+          documentVectorsList.foreach(documentVector => {
+            avgCentroid = avgCentroid.zip(documentVector).map(v => v._1 + v._2)
+          })
+          avgCentroid = avgCentroid.map(e => e / numberOfDocuments)
+          centroids = centroids :+ avgCentroid
+        }
+      }
 
       // TODO: Remove this at the end
       println("------ New centroid list")

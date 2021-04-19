@@ -1,23 +1,12 @@
 package input_processing
 
-import org.apache.log4j.LogManager
 import org.apache.spark.ml.feature.{HashingTF, IDF, Tokenizer}
 import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
-object ParseInput {
-  def main(args: Array[String]): Unit = {
-    val logger: org.apache.log4j.Logger = LogManager.getRootLogger
-
-    // Right now, only processing one input-file file at a time
-    if (args.length != 2) {
-      logger.error("Usage:\n <input-file-path> <output-dir-path>")
-      System.exit(1)
-    }
-
-    val inputFilePath = args(0)
-    val outputDirPath = args(1)
-
+object FileVectorGenerator {
+  def parseInput(inputFilePath: String): RDD[(String, Seq[Double])] = {
     // TODO: Does it make sense to read this directly in spark?
     val inputSeq = parse_input(inputFilePath)
     val spark = SparkSession.builder()
@@ -40,10 +29,9 @@ object ParseInput {
     val rescaledData = idfModel.transform(featurizedData)
 
     val idFeatureRdd = rescaledData.rdd.map(row => (row.getAs[String]("id"), row.getAs[Vector]("features").toArray.toSeq))
-    idFeatureRdd.collect().foreach(println)
 
-    // TODO: Think about whether this is really necessary
-    idFeatureRdd.saveAsTextFile(outputDirPath + "/rdd_output")
+//    idFeatureRdd.collect().foreach(println)
+    idFeatureRdd
   }
 
   def parse_input(inputFilePath: String): Seq[(String, String, String)] = {

@@ -5,7 +5,8 @@ import java.io.File
 import input_processing.FileVectorGenerator
 import org.apache.log4j.LogManager
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{SparkConf, SparkContext}
+
+import scala.collection.Map
 
 object KMeansSequential {
   val DATA_DIR = "data";
@@ -25,24 +26,13 @@ object KMeansSequential {
 
     val spark = SparkSession.builder()
       .master("local[4]")
-      .appName("parse-input")
+      .appName("KMeans Sequential")
       .getOrCreate()
 
     val vectorRdd = FileVectorGenerator.generate_vector(dataPath, spark)
-    vectorRdd.saveAsTextFile(outputPath)
+    val sc = spark.sparkContext
 
-    // TODO: The rest needs to be fixed according to the input
-    /*
-    val conf = new SparkConf().setAppName("KMeans Sequential").setMaster("local[4]")
-    val sc = new SparkContext(conf)
-
-    val dataFiles = sc.textFile(dataPath)
-
-    // Convert input data into a list
-    val inputData = dataFiles.map(line => {
-      val coords = line.split(",").map(v => v.toDouble)
-      (coords(0), coords(1))
-    }).collect()
+    val inputData = vectorRdd.collectAsMap()
 
     // Broadcast input data
     val broadcastedData = sc.broadcast(inputData)
@@ -54,10 +44,9 @@ object KMeansSequential {
     // Call kmeans on every entry in the config file
     val kValWithClustersPair = kValues.map(k => (k, kMeans(k, broadcastedData.value)))
 
-    // TODO: Can this formatted to something better?
+    // TODO: This needs to be changed
     // Write output to file
     kValWithClustersPair.saveAsTextFile(args(1))
-     */
   }
 
   def calculateDistance(point: (Double, Double), center: (Double, Double)): Double = {
@@ -79,13 +68,16 @@ object KMeansSequential {
     }).sum
   }
 
-  def kMeans(k: Int, inputData: Array[(Double, Double)]): (Double, Map[(Double, Double), Vector[(Double, Double)]]) = {
+  def kMeans(k: Int, inputData: Map[String, Seq[Double]]): (Double, Map[(Double, Double), Vector[(Double, Double)]]) = {
     // Get random centroids
     // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
     // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
-    var centroids = scala.util.Random.shuffle(Vector.range(0, inputData.length))
+    var centroids = scala.util.Random.shuffle(Vector.range(0, inputData.size))
       .take(k)
-      .map(randomIndex => inputData(randomIndex))
+      .map(randomIndex => {
+        val randomKey = inputData.keySet.toList(randomIndex)
+        inputData(randomKey)
+      })
 
     // TODO: Remove this at the end
     println("Centroids - ")
@@ -96,6 +88,10 @@ object KMeansSequential {
 
     var centroidMap: Map[(Double, Double), Vector[(Double, Double)]] = Map()
 
+    // TODO: Remove dummy return
+    (1.0, centroidMap)
+
+    /*
     // Loop till convergence (centroids do not change)
     while (!(centroids == prevCentroids)) {
       // Reset the map
@@ -145,5 +141,6 @@ object KMeansSequential {
     }
 
     (calculateSSE(centroidMap), centroidMap)
+     */
   }
 }

@@ -60,7 +60,10 @@ object KMeansSequential {
     val centerMagnitude = Math.pow(center.map(e => Math.pow(e, 2)).sum, 0.5)
     val magnitude = pointMagnitude * centerMagnitude
 
-    dotProduct / magnitude
+    // Bigger the cos value, more similar they are. So just inverting this
+    // so that it fits into the distance idea, where a smaller distance would mean
+    // they are closer together.
+    1.0 - (dotProduct / magnitude)
   }
 
   def calculateSSE(kMeansMap: Map[Seq[Double], Vector[(String, Seq[Double])]]): Double = {

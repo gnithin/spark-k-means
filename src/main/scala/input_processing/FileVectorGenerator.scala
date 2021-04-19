@@ -21,7 +21,6 @@ object FileVectorGenerator {
     val wordsData = tokenizer.transform(inputDf)
 
     // TODO: Remove stop-words
-    // TODO: Remove Tags inside the words
 
     // TODO: What should the 50 be replaced with? It should be a big number, but what?
     val hashingTF = new HashingTF()
@@ -63,9 +62,14 @@ object FileVectorGenerator {
             (row \ "@Id").text,
             (row \ "@PostTypeId").text
           ),
-          (row \ "@Body").text
+          clean_raw_text((row \ "@Body").text)
         )
     }
+  }
+
+  def clean_raw_text(rawText: String): String = {
+    // Strip all the tags
+    rawText.replaceAll("""(?:<).*?(?:>)""", "")
   }
 
   def generate_id(filePath: String, id: String, postType: String): String = {

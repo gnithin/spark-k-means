@@ -21,6 +21,7 @@ object FileVectorGenerator {
     val wordsData = tokenizer.transform(inputDf)
 
     // TODO: Remove stop-words
+    // TODO: Remove Tags inside the words
 
     // TODO: What should the 50 be replaced with? It should be a big number, but what?
     val hashingTF = new HashingTF()

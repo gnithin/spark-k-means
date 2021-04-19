@@ -46,18 +46,13 @@ object KMeansSequential {
     // Call kmeans on every entry in the config file
     val kValWithClustersPair = kValues.map(k => (k, kMeans(k, broadcastedData.value)))
 
-    // TODO: This needs to be changed
     // Write output to file
     kValWithClustersPair.saveAsTextFile(args(1))
   }
 
-  def calculateDistance(
-                         point: Seq[Double],
-                         center: Seq[Double])
-  : Double = {
+  def calculateDistance(point: Seq[Double], center: Seq[Double]): Double = {
     // Cosine similarity
     // cos(theta) = A.B / |A|*|B|
-
     val dotProduct = point.zip(center).
       map(entry => entry._1 * entry._2).sum
 
@@ -68,17 +63,18 @@ object KMeansSequential {
     dotProduct / magnitude
   }
 
-  // TODO: Fix this
-  //  def calculateSSE(kMeansMap: Map[(Double, Double), Vector[(Double, Double)]]): Double = {
-  //    kMeansMap.map(item => {
-  //      val center = item._1
-  //      val valuesList = item._2
-  //
-  //      valuesList.map(v =>
-  //        Math.pow(calculateDistance(v, center), 2)
-  //      ).sum
-  //    }).sum
-  //  }
+  def calculateSSE(kMeansMap: Map[Seq[Double], Vector[(String, Seq[Double])]]): Double = {
+    /*
+    SSE = sum of all (square of distance between document-vector and it's centroid)
+     */
+    kMeansMap.map {
+      case (centroid, documentsList) =>
+        documentsList.map {
+          case (_, documentVector) =>
+            Math.pow(calculateDistance(centroid, documentVector), 2)
+        }.sum
+    }.sum
+  }
 
   def kMeans(k: Int, inputData: Map[String, Seq[Double]]): (Double, Map[Seq[Double], Vector[(String, Seq[Double])]]) = {
     // Get random centroids
@@ -160,8 +156,6 @@ object KMeansSequential {
       println("****** Iteration ends")
     }
 
-    //    (calculateSSE(centroidMap), centroidMap)
-    // TODO: Remove dummy return
-    (1.0, centroidMap)
+    (calculateSSE(centroidMap), centroidMap)
   }
 }

@@ -1,5 +1,6 @@
 package distributed
 
+import input_processing.FileVectorGenerator
 import org.apache.log4j.LogManager
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.avg
@@ -21,6 +22,17 @@ object KMeansDistributed {
       .master(args(3))
       .appName("KMeans Distributed")
       .getOrCreate()
+
+    logger.info("***************Preparing Data*************");
+    val vectorRDD = FileVectorGenerator.generate_vector(args(1), spark)
+
+    // Assumption the number of initial centers will be a relatively very small integer
+    val initialCenterRowIds = spark.sparkContext.textFile(args(0))
+      .map(rowId => rowId.toInt)
+      .collect()
+      .toList
+
+    val initialCentroids =  findTfIdfCentroidRepresentation(initialCenterRowIds)
 
     logger.info("***************K Means Distributed*************");
     val maxIterations = 10; // to prevent long programs - for convergence
@@ -90,6 +102,19 @@ object KMeansDistributed {
       }
     }
     centers(bestIndex)
+  }
+
+  /**
+   * This method returns a Vector of TF.IDF representation for a given row IDs. If a row ID is not
+   * found in the input data set, the corresponding output will not be included in the final vector.
+   * For instance, if rowIds contain only a single entry and it is invalid ID, then output will be
+   * an empty vector.
+   *
+   * @param rowIds The rowIds in the dataset, for which Tf.Idf vectors need to be calculated.
+   * @return A vector containing Tf.IDF representation for each row ID.
+   * */
+  def findTfIdfCentroidRepresentation(rowIds: List[Int]): Vector[Seq[Double]] = {
+
   }
 
 }

@@ -13,7 +13,7 @@ object KMeansSequential {
   val CONFIG_DIR = "configuration";
 
   // TODO: Think about the correct entry
-  val MAX_ITERATIONS = 10
+  val MAX_ITERATIONS = 100
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger

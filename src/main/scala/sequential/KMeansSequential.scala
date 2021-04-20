@@ -2,12 +2,18 @@ package sequential
 
 import java.io.File
 
+import input_processing.FileVectorGenerator
 import org.apache.log4j.LogManager
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
+
+import scala.collection.Map
 
 object KMeansSequential {
   val DATA_DIR = "data";
   val CONFIG_DIR = "configuration";
+
+  // TODO: Think about the correct entry
+  val MAX_ITERATIONS = 100
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -15,20 +21,21 @@ object KMeansSequential {
       logger.error("Usage:\n <input dir> <output dir>")
       System.exit(1)
     }
-    val conf = new SparkConf().setAppName("KMeans Sequential").setMaster("local[4]")
-    val sc = new SparkContext(conf)
 
     val inputPath = args(0)
     val configPath = inputPath + File.separator + CONFIG_DIR
     val dataPath = inputPath + File.separator + DATA_DIR
+    val outputPath = args(1)
 
-    val dataFiles = sc.textFile(dataPath)
+    val spark = SparkSession.builder()
+      .master("local[4]")
+      .appName("KMeans Sequential")
+      .getOrCreate()
 
-    // Convert input data into a list
-    val inputData = dataFiles.map(line => {
-      val coords = line.split(",").map(v => v.toDouble)
-      (coords(0), coords(1))
-    }).collect()
+    val vectorRdd = FileVectorGenerator.generate_vector(dataPath, spark)
+    val sc = spark.sparkContext
+
+    val inputData = vectorRdd.collectAsMap()
 
     // Broadcast input data
     val broadcastedData = sc.broadcast(inputData)
@@ -40,94 +47,120 @@ object KMeansSequential {
     // Call kmeans on every entry in the config file
     val kValWithClustersPair = kValues.map(k => (k, kMeans(k, broadcastedData.value)))
 
-    // TODO: Can this formatted to something better?
     // Write output to file
-    kValWithClustersPair.saveAsTextFile(args(1))
+    kValWithClustersPair.saveAsTextFile(outputPath)
   }
 
-  def calculateDistance(point: (Double, Double), center: (Double, Double)): Double = {
-    // Square root of - (x2 - x1)^2 - (y2 - y1)^2
-    Math.pow(
-      Math.pow(point._1 - center._1, 2) + Math.pow(point._2 - center._2, 2),
-      0.5
-    )
+  def calculateDistance(point: Seq[Double], center: Seq[Double]): Double = {
+    // Cosine similarity
+    // cos(theta) = A.B / |A|*|B|
+    val dotProduct = point.zip(center).
+      map(entry => entry._1 * entry._2).sum
+
+    val pointMagnitude = Math.pow(point.map(e => Math.pow(e, 2)).sum, 0.5)
+    val centerMagnitude = Math.pow(center.map(e => Math.pow(e, 2)).sum, 0.5)
+    val magnitude = pointMagnitude * centerMagnitude
+
+    // Bigger the cos value, more similar they are. So just inverting this
+    // so that it fits into the distance idea, where a smaller distance would mean
+    // they are closer together.
+    1.0 - (dotProduct / magnitude)
   }
 
-  def calculateSSE(kMeansMap: Map[(Double, Double), Vector[(Double, Double)]]): Double = {
-    kMeansMap.map(item => {
-      val center = item._1
-      val valuesList = item._2
-
-      valuesList.map(v =>
-        Math.pow(calculateDistance(v, center), 2)
-      ).sum
-    }).sum
+  def calculateSSE(kMeansMap: Map[Seq[Double], Vector[(String, Seq[Double])]]): Double = {
+    /*
+    SSE = sum of all (square of distance between document-vector and it's centroid)
+     */
+    kMeansMap.map {
+      case (centroid, documentsList) =>
+        documentsList.map {
+          case (_, documentVector) =>
+            Math.pow(calculateDistance(centroid, documentVector), 2)
+        }.sum
+    }.sum
   }
 
-  def kMeans(k: Int, inputData: Array[(Double, Double)]): (Double, Map[(Double, Double), Vector[(Double, Double)]]) = {
+  def kMeans(k: Int, inputData: Map[String, Seq[Double]]): (Double, Map[Seq[Double], Vector[(String, Seq[Double])]]) = {
     // Get random centroids
     // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
     // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
-    var centroids = scala.util.Random.shuffle(Vector.range(0, inputData.length))
+    var centroids = scala.util.Random.shuffle(Vector.range(0, inputData.size))
       .take(k)
-      .map(randomIndex => inputData(randomIndex))
+      .map(randomIndex => {
+        val randomKey = inputData.keySet.toList(randomIndex)
+        inputData(randomKey)
+      })
 
     // TODO: Remove this at the end
-    println("Centroids - ")
-    centroids.foreach(println)
-    println("*****")
+//    println("Centroids - ")
+//    centroids.foreach(println)
+//    println("*****")
 
-    var prevCentroids = Vector[(Double, Double)]()
+    var prevCentroids = Vector[Seq[Double]]()
 
-    var centroidMap: Map[(Double, Double), Vector[(Double, Double)]] = Map()
+    var centroidMap: Map[Seq[Double], Vector[(String, Seq[Double])]] = Map()
 
-    // Loop till convergence (centroids do not change)
-    while (!(centroids == prevCentroids)) {
+    var iterations = 0
+
+    // TODO: Fix the comparison for convergence
+    // Loop till convergence (centroids do not change or max-iterations reached)
+    while (!(centroids == prevCentroids) && iterations < MAX_ITERATIONS) {
+      iterations += 1
+
       // Reset the map
       centroidMap = Map()
 
       // Assign each input point to a centroid
-      inputData.foreach(point => {
+      inputData.foreach(document => {
+        val documentVector = document._2
+
         val minCentroidDistancePair = centroids.map(centroid => {
-          (centroid, calculateDistance(centroid, point))
+          (centroid, calculateDistance(centroid, documentVector))
         }).minBy(_._2)
         val minCentroid = minCentroidDistancePair._1
 
         if (centroidMap.contains(minCentroid)) {
           val clusterList = centroidMap(minCentroid)
-          val newClusterList = clusterList :+ point
+          val newClusterList = clusterList :+ document
           centroidMap += (minCentroid -> newClusterList)
 
         } else {
-          val newClusterList = Vector(point)
+          val newClusterList = Vector(document)
           centroidMap += (minCentroid -> newClusterList)
         }
       })
 
       // TODO: Remove this at the end
-      println("----- Map")
-      centroidMap.foreach(println)
+//      println("----- Map")
+//      centroidMap.foreach(println)
 
       // Recalculate centroids
       prevCentroids = centroids
-      centroids = Vector[(Double, Double)]()
+      centroids = Vector[Seq[Double]]()
+      val vectorSize = prevCentroids.head.length
 
-      centroidMap.foreach(item => {
-        val pointsList = item._2
-        val pointSize = pointsList.length
-        val sumPoints = pointsList.reduce((l, r) => {
-          (l._1 + r._1, l._2 + r._2)
-        })
+      centroidMap.foreach {
+        case (centroidKey, documentsList) => {
+          // Since the documentsList are of equal size, we can avg them out
+          var avgCentroid = Vector.fill[Double](vectorSize)(0.0)
+          val documentVectorsList = documentsList.map(d => d._2)
+          val numberOfDocuments = documentVectorsList.length
 
-        val avgPoints = (sumPoints._1 / pointSize, sumPoints._2 / pointSize)
-        centroids = centroids :+ avgPoints
-      })
+          documentVectorsList.foreach(documentVector => {
+            avgCentroid = avgCentroid.zip(documentVector).map(v => v._1 + v._2)
+          })
+          avgCentroid = avgCentroid.map(e => e / numberOfDocuments)
+          centroids = centroids :+ avgCentroid
+        }
+      }
 
       // TODO: Remove this at the end
-      println("------ New centroid list")
-      centroids.foreach(println)
+//      println("------ New centroid list")
+//      centroids.foreach(println)
       println("****** Iteration ends")
     }
+
+    println(s"Num iterations $iterations for k - $k")
 
     (calculateSSE(centroidMap), centroidMap)
   }

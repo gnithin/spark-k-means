@@ -2,6 +2,7 @@ package distributed
 
 import input_processing.FileVectorGenerator
 import org.apache.log4j.LogManager
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.avg
 
@@ -32,11 +33,13 @@ object KMeansDistributed {
       .collect()
       .toList
 
-    val initialCentroids =  findTfIdfCentroidRepresentation(initialCenterRowIds)
+    // generate internal TF.IDF representation for rows provided by the user to be used as centroids
+    val initialCentroids = findTfIdfCentroidRepresentation(initialCenterRowIds, vectorRDD)
+    logger.info("initial centroids generated are")
+    initialCentroids.foreach(println)
 
     logger.info("***************K Means Distributed*************");
     val maxIterations = 10; // to prevent long programs - for convergence
-    import spark.implicits._
     // Prepare a list of initial centroids (x,y) coordinates -
     // number of initial centroids in the file depecit the value of K
     // maintaining as a list since k will not be huge and will fit on a single machine.
@@ -55,7 +58,6 @@ object KMeansDistributed {
     var prevCentroids = centroidsList
 
     // running a breakable loop - break the loop if convergence is reached prior to max_iterations
-    import scala.util.control.Breaks._
     breakable {
       for (i <- 0 until maxIterations) {
         var updatedCenters = samplePointsDS.map(point => (bestCentroid(point, centroidsList), point._1, point._2))
@@ -110,11 +112,16 @@ object KMeansDistributed {
    * For instance, if rowIds contain only a single entry and it is invalid ID, then output will be
    * an empty vector.
    *
-   * @param rowIds The rowIds in the dataset, for which Tf.Idf vectors need to be calculated.
+   * @param rowIds    The rowIds in the dataset, for which Tf.Idf vectors need to be calculated.
+   * @param vectorRDD The Pair RDD that contains key value pair of custom generated Row ID & TF.IDF representation of that row.
    * @return A vector containing Tf.IDF representation for each row ID.
    * */
-  def findTfIdfCentroidRepresentation(rowIds: List[Int]): Vector[Seq[Double]] = {
+  def findTfIdfCentroidRepresentation(rowIds: List[Int], vectorRDD: RDD[(String, Seq[Double])]): Vector[Seq[Double]] = {
+    val vectorTfIdf = vectorRDD.filter(rowIdToTfIdf => rowIds.contains(rowIdToTfIdf._1.split("--")(1).toInt))
+      .map(rowIdToTfIdf => rowIdToTfIdf._2)
+      .collect().toVector
 
+    vectorTfIdf
   }
 
 }

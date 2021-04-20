@@ -44,6 +44,22 @@ object FileVectorGenerator {
     idFeatureRdd
   }
 
+  def calculateDistance(point: Seq[Double], center: Seq[Double]): Double = {
+    // Cosine similarity
+    // cos(theta) = A.B / |A|*|B|
+    val dotProduct = point.zip(center).
+      map(entry => entry._1 * entry._2).sum
+
+    val pointMagnitude = Math.pow(point.map(e => Math.pow(e, 2)).sum, 0.5)
+    val centerMagnitude = Math.pow(center.map(e => Math.pow(e, 2)).sum, 0.5)
+    val magnitude = pointMagnitude * centerMagnitude
+
+    // Bigger the cos value, more similar they are. So just inverting this
+    // so that it fits into the distance idea, where a smaller distance would mean
+    // they are closer together.
+    1.0 - (dotProduct / magnitude)
+  }
+
   def parse_input(sc: SparkContext, inputFilePath: String): RDD[(String, String)] = {
     /*
     NOTE-1: Purposefully using wholeTextFiles instead of textFiles, since the input

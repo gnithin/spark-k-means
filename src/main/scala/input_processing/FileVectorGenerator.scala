@@ -24,8 +24,8 @@ object FileVectorGenerator {
     val filteredWords = remover.transform(wordsData)
 
     // TODO: Remove this
-    filteredWords.show()
-    println("*" * 50)
+//    filteredWords.show()
+//    println("*" * 50)
 
     // TODO: Think about the ideal number of features. It should be the number of words upto a limit (if the number is too big)
     val hashingTF = new HashingTF()

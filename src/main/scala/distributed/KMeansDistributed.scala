@@ -4,7 +4,6 @@ import input_processing.FileVectorGenerator
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.avg
 
 /**
  * This object runs the KMeans algorithm on a given set of initial centroids in a distributed mode,
@@ -25,7 +24,7 @@ object KMeansDistributed {
       .getOrCreate()
 
     logger.info("***************Preparing Data*************");
-    val vectorRDD = FileVectorGenerator.generate_vector(args(1), spark)
+    val documentVectorRDD = FileVectorGenerator.generate_vector(args(1), spark)
 
     // Assumption the number of initial centers will be a relatively very small integer
     val initialCenterRowIds = spark.sparkContext.textFile(args(0))
@@ -34,53 +33,16 @@ object KMeansDistributed {
       .toList
 
     // generate internal TF.IDF representation for rows provided by the user to be used as centroids
-    val initialCentroids = findTfIdfCentroidRepresentation(initialCenterRowIds, vectorRDD)
+    val initialCentroids = findTfIdfCentroidRepresentation(initialCenterRowIds, documentVectorRDD)
     logger.info("initial centroids generated are")
     initialCentroids.foreach(println)
 
     logger.info("***************K Means Distributed*************");
-    val maxIterations = 10; // to prevent long programs - for convergence
-    // Prepare a list of initial centroids (x,y) coordinates -
-    // number of initial centroids in the file depecit the value of K
-    // maintaining as a list since k will not be huge and will fit on a single machine.
-    var centroidsList = spark.sparkContext.textFile(args(0))
-      .map(point => (point.split(",")(0).toDouble, point.split(",")(1).toDouble))
-      .collect()
-      .toList
+    val resultRDD = distributedKMeans(documentVectorRDD, initialCentroids, spark)
 
-    // Prepare a Dataset for the points that need to be assigned to a cluster
-    // This dataset is maintained with 2 columns, one for x and the other for y
-    val samplePointsDS = spark.sparkContext.textFile(args(1))
-      .map(point => (point.split(",")(0).toDouble, point.split(",")(1).toDouble))
-      .toDS()
-
-    var maxIterationsReached = true
-    var prevCentroids = centroidsList
-
-    // running a breakable loop - break the loop if convergence is reached prior to max_iterations
-    breakable {
-      for (i <- 0 until maxIterations) {
-        var updatedCenters = samplePointsDS.map(point => (bestCentroid(point, centroidsList), point._1, point._2))
-          .groupBy($"_1") // group all points by the centroid - so all points which have a common 'best centroid' will be grouped together
-          .agg(
-            avg($"_2").as("avg_x"), // aggregate - average out all the x values for all points belonging to this centroid
-            avg($"_3").as("avg_y") // aggregate - average out all the y values for all points belonging to this centroid
-          )
-        centroidsList = updatedCenters.select("avg_x", "avg_y").as[(Double, Double)].collect().toList
-        if (prevCentroids == centroidsList) {
-          println("CONVERGENCE REACHED")
-          maxIterationsReached = false
-          break() // break if convergence reached
-        }
-        prevCentroids = centroidsList // update previous centroids with the currently found centroids
-      }
-    }
-    if (maxIterationsReached) {
-      println("MAX ITERATIONS REACHED")
-    }
     // write the new centers back to the file - we use coalesce here so that we get output on a single file
-    // this operation is performed only once on a relatively small list
-    spark.sparkContext.parallelize(centroidsList).toDF().coalesce(1).write.csv(args(2))
+    // this operation is performed only once on a relatively small list (based on number of entries)
+    resultRDD.coalesce(1).saveAsTextFile(args(2))
   }
 
   /**
@@ -154,15 +116,17 @@ object KMeansDistributed {
       // update the centroids for next iteration based on the prepared results
       previousCentroids = currentCentroids
       currentCentroids = getUpdatedCentroids(resultRDD)
+      println("Iteration " + currentIteration + " completed")
     }
     resultRDD
   }
 
   def getUpdatedCentroids(intermediateResults: RDD[(Seq[Double], Vector[(String, Seq[Double])])]): Vector[Seq[Double]] = {
     var updatedCentroids = Vector[Seq[Double]]()
+    val lengthOfDocumentVectors = intermediateResults.first()._1.length
     intermediateResults.map(centroidVectorToDocumentVectors => centroidVectorToDocumentVectors._2)
       .foreach(documentVectors => {
-        var avgCentroid = Vector.fill[Double](intermediateResults.first()._1.length)(0.0)
+        var avgCentroid = Vector.fill[Double](lengthOfDocumentVectors)(0.0)
         val documentVectorList = documentVectors.map(documentVectors => documentVectors._2)
         val numberOfDocuments = documentVectorList.length
 

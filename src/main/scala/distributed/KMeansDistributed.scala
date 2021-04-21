@@ -106,6 +106,19 @@ object KMeansDistributed {
     centers(bestIndex)
   }
 
+  def closestCentroid(documentVector: Seq[Double], currentCentroids: Vector[Seq[Double]]): Seq[Double] = {
+    var closestDistance = Double.PositiveInfinity
+    var bestCentroid = currentCentroids(0) // randomly selected
+    currentCentroids.foreach(centroid => {
+      val distanceFromCentroid = FileVectorGenerator.calculateDistance(documentVector, centroid)
+      if (distanceFromCentroid <= closestDistance) {
+        closestDistance = distanceFromCentroid
+        bestCentroid = centroid
+      }
+    })
+    bestCentroid
+  }
+
   /**
    * This method returns a Vector of TF.IDF representation for a given row IDs. If a row ID is not
    * found in the input data set, the corresponding output will not be included in the final vector.
@@ -124,4 +137,39 @@ object KMeansDistributed {
     vectorTfIdf
   }
 
+  def distributedKMeans(inputData: RDD[(String, Seq[Double])], centroids: Vector[Seq[Double]], sparkSession: SparkSession): RDD[(Seq[Double], Vector[(String, Seq[Double])])] = {
+    val maxIterations = 100; // to prevent long programs - for convergence
+    var previousCentroids = Vector[Seq[Double]]() // initially empty - so runs at least once
+    var currentCentroids = centroids
+    var currentIteration = 0;
+    var resultRDD: RDD[(Seq[Double], Vector[(String, Seq[Double])])] = sparkSession.sparkContext.emptyRDD
+
+    // run k means till either convergence is reached or max iterations are reached
+    while ((previousCentroids != currentCentroids) || currentIteration < maxIterations) {
+      currentIteration += 1
+      // prepare intermediate result for this iteration
+      resultRDD = inputData.map(rowIdToDocVector => (closestCentroid(rowIdToDocVector._2, centroids), Vector((rowIdToDocVector._1, rowIdToDocVector._2))))
+        .reduceByKey((accumulator, value) => accumulator ++ value)
+
+      // update the centroids for next iteration based on the prepared results
+      previousCentroids = currentCentroids
+      currentCentroids = getUpdatedCentroids(resultRDD)
+    }
+    resultRDD
+  }
+
+  def getUpdatedCentroids(intermediateResults: RDD[(Seq[Double], Vector[(String, Seq[Double])])]): Vector[Seq[Double]] = {
+    var updatedCentroids = Vector[Seq[Double]]()
+    intermediateResults.map(centroidVectorToDocumentVectors => centroidVectorToDocumentVectors._2)
+      .foreach(documentVectors => {
+        var avgCentroid = Vector.fill[Double](intermediateResults.first()._1.length)(0.0)
+        val documentVectorList = documentVectors.map(documentVectors => documentVectors._2)
+        val numberOfDocuments = documentVectorList.length
+
+        documentVectorList.foreach(documentVector => avgCentroid.zip(documentVector).map(value => value._1 + value._2))
+        avgCentroid = avgCentroid.map(centroidValue => centroidValue / numberOfDocuments)
+        updatedCentroids = updatedCentroids :+ avgCentroid
+      })
+    updatedCentroids
+  }
 }

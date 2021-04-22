@@ -136,6 +136,7 @@ object KMeansSequential {
     // Loop till convergence (centroids do not change or max-iterations reached)
     while (!areCentroidsEqual(centroids, prevCentroids) && iterations < MAX_ITERATIONS) {
       iterations += 1
+      val startTime = System.nanoTime
 
       // Reset the map
       centroidMap = Map()
@@ -184,10 +185,12 @@ object KMeansSequential {
         }
       }
 
+      val loopDuration = (System.nanoTime - startTime) / 1e9d
+
       // TODO: Remove this at the end
       //      println("------ New centroid list")
       //      centroids.foreach(println)
-      println(s"****** Iteration $iterations ends")
+      println(s"****** Iteration $iterations ends (Took $loopDuration seconds)")
     }
 
     println(s"Num iterations $iterations for k - $k")

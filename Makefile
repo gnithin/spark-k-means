@@ -9,6 +9,7 @@ app.name=K Means
 jar.name=kmeans.jar
 maven.jar.name=kmeans-1.0.jar
 job.sequential.name=sequential.KMeansSequential
+job.name=$(PRIVATE_AWS_JOB_NAME)
 job.distributed.name=distributed.KMeansDistributed
 local.master=local[4]
 local.distributed.input_centers=distributed_input/centers.txt

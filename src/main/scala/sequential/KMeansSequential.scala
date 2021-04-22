@@ -12,7 +12,7 @@ object KMeansSequential {
   val DATA_DIR = "data"
   val CONFIG_DIR = "configuration"
   val THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES = 100
-  val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.01
+  val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.001
 
   // TODO: Think about the correct entry
   val MAX_ITERATIONS = 100

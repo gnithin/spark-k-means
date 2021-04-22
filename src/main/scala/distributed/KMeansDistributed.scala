@@ -107,7 +107,7 @@ object KMeansDistributed {
     var resultRDD: RDD[(Seq[Double], Vector[(String, Seq[Double])])] = sparkSession.sparkContext.emptyRDD
 
     // run k means till either convergence is reached or max iterations are reached
-    while ((previousCentroids != currentCentroids) || currentIteration < maxIterations) {
+    while (!(previousCentroids == currentCentroids) && currentIteration < maxIterations) {
       currentIteration += 1
       // prepare intermediate result for this iteration
       resultRDD = inputData.map(rowIdToDocVector => (closestCentroid(rowIdToDocVector._2, centroids), Vector((rowIdToDocVector._1, rowIdToDocVector._2))))
@@ -115,8 +115,13 @@ object KMeansDistributed {
 
       // update the centroids for next iteration based on the prepared results
       previousCentroids = currentCentroids
+      currentCentroids = Vector[Seq[Double]]()
       currentCentroids = getUpdatedCentroids(resultRDD)
       println("Iteration " + currentIteration + " completed")
+      println("Previous centroids")
+      println(previousCentroids)
+      print("New centroids")
+      println(currentCentroids)
     }
     resultRDD
   }
@@ -124,16 +129,24 @@ object KMeansDistributed {
   def getUpdatedCentroids(intermediateResults: RDD[(Seq[Double], Vector[(String, Seq[Double])])]): Vector[Seq[Double]] = {
     var updatedCentroids = Vector[Seq[Double]]()
     val lengthOfDocumentVectors = intermediateResults.first()._1.length
+    println("length of doc vecs " + lengthOfDocumentVectors)
     intermediateResults.map(centroidVectorToDocumentVectors => centroidVectorToDocumentVectors._2)
       .foreach(documentVectors => {
         var avgCentroid = Vector.fill[Double](lengthOfDocumentVectors)(0.0)
         val documentVectorList = documentVectors.map(documentVectors => documentVectors._2)
         val numberOfDocuments = documentVectorList.length
+        println ("number of documents " + numberOfDocuments)
 
-        documentVectorList.foreach(documentVector => avgCentroid.zip(documentVector).map(value => value._1 + value._2))
+        documentVectorList.foreach(documentVector => {
+          avgCentroid = avgCentroid.zip(documentVector).map(value => value._1 + value._2)
+        })
         avgCentroid = avgCentroid.map(centroidValue => centroidValue / numberOfDocuments)
+        println("average centroid")
+        println(avgCentroid)
         updatedCentroids = updatedCentroids :+ avgCentroid
+        println("updated centroids")
+        println(updatedCentroids)
       })
-    updatedCentroids
+    return updatedCentroids
   }
 }

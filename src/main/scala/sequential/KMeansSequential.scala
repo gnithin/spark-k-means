@@ -12,7 +12,7 @@ object KMeansSequential {
   val DATA_DIR = "data"
   val CONFIG_DIR = "configuration"
   val THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES = 100
-  val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.001
+  val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.01
 
   // TODO: Think about the correct entry
   val MAX_ITERATIONS = 100
@@ -44,10 +44,22 @@ object KMeansSequential {
 
     // Process config files
     val configFiles = sc.textFile(configPath)
+
+    val numPartitions = 4
+    /*
+    Partition the k-values uniformly so that k-means is uniformly distributed across nodes.
+    - The zip with index essentially adds an index to every entry
+    - Then we flip the pair-rdd, so that the index is key
+    - We partition using the index since that will be different for all values (multiple k values can be the same)
+     */
     val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
+      .zipWithIndex()
+      .map(k => (k._2, k._1))
+      .partitionBy(new CustomSequentialKInputPartitioner(numPartitions))
 
     // Call kmeans on every entry in the config file
-    val kValWithClustersPair = kValues.map(k => {
+    val kValWithClustersPair = kValues.map(kValue => {
+      val k = kValue._2
       val res = kMeans(k, broadcastedData.value)
       var clusters = List[List[String]]()
       res._2.foreach { case (_, docVectorList) =>
@@ -101,7 +113,7 @@ object KMeansSequential {
 
     // Comparison for convergence for big centroid entries (soft-convergence)
     // println("Performing soft-convergence")
-    if (centroids.length != prevCentroids.length){
+    if (centroids.length != prevCentroids.length) {
       return false
     }
 
@@ -208,3 +220,4 @@ object KMeansSequential {
     (calculateSSE(centroidMap), centroidMap)
   }
 }
+

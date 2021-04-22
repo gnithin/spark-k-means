@@ -46,6 +46,7 @@ object KMeansDistributed {
   }
 
   /**
+   * TODO: Fix Doc
    * This method returns the best centroid for a given data point. The best centroid for any given
    * data point is the centroid which has the closest distance to the data point. Here the distance
    * from the given data point is computed as the Euclidean distance.
@@ -54,20 +55,6 @@ object KMeansDistributed {
    * @param centers   The list of available centroids, to which the dataPoint needs to be assigned.
    * @return The best centroid for a given dataPoint as an XY coordinate.
    * */
-  def bestCentroid(dataPoint: (Double, Double), centers: List[(Double, Double)]): (Double, Double) = {
-    var bestIndex = 0
-    var closestDistance = Double.PositiveInfinity
-
-    for (i <- centers.indices) {
-      val distance = scala.math.sqrt(scala.math.pow((dataPoint._1 - centers(i)._1), 2) + scala.math.pow((dataPoint._2 - centers(i)._2), 2))
-      if (distance < closestDistance) {
-        closestDistance = distance
-        bestIndex = i;
-      }
-    }
-    centers(bestIndex)
-  }
-
   def closestCentroid(documentVector: Seq[Double], currentCentroids: Vector[Seq[Double]]): Seq[Double] = {
     var closestDistance = Double.PositiveInfinity
     var bestCentroid = currentCentroids(0) // randomly selected
@@ -110,12 +97,11 @@ object KMeansDistributed {
     while (!(previousCentroids == currentCentroids) && currentIteration < maxIterations) {
       currentIteration += 1
       // prepare intermediate result for this iteration
-      resultRDD = inputData.map(rowIdToDocVector => (closestCentroid(rowIdToDocVector._2, centroids), Vector((rowIdToDocVector._1, rowIdToDocVector._2))))
+      resultRDD = inputData.map(rowIdToDocVector => (closestCentroid(rowIdToDocVector._2, currentCentroids), Vector((rowIdToDocVector._1, rowIdToDocVector._2))))
         .reduceByKey((accumulator, value) => accumulator ++ value)
 
       // update the centroids for next iteration based on the prepared results
       previousCentroids = currentCentroids
-      currentCentroids = Vector[Seq[Double]]()
       currentCentroids = getUpdatedCentroids(resultRDD)
       println("Iteration " + currentIteration + " completed")
       println("Previous centroids")
@@ -131,6 +117,7 @@ object KMeansDistributed {
     val lengthOfDocumentVectors = intermediateResults.first()._1.length
     println("length of doc vecs " + lengthOfDocumentVectors)
     intermediateResults.map(centroidVectorToDocumentVectors => centroidVectorToDocumentVectors._2)
+      .collect()
       .foreach(documentVectors => {
         var avgCentroid = Vector.fill[Double](lengthOfDocumentVectors)(0.0)
         val documentVectorList = documentVectors.map(documentVectors => documentVectors._2)
@@ -147,6 +134,6 @@ object KMeansDistributed {
         println("updated centroids")
         println(updatedCentroids)
       })
-    return updatedCentroids
+    updatedCentroids
   }
 }

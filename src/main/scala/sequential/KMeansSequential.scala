@@ -86,12 +86,12 @@ object KMeansSequential {
     val numFeatures = centroids.head.length
 
     if (numFeatures < THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES) {
-      println("Performing hard-convergence")
+      // println("Performing hard-convergence")
       return centroids == prevCentroids
     }
 
     // Comparison for convergence for big centroid entries (soft-convergence)
-    println("Performing soft-convergence")
+    // println("Performing soft-convergence")
     if (centroids.length != prevCentroids.length){
       return false
     }

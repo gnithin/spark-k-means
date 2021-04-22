@@ -123,9 +123,9 @@ object KMeansSequential {
       })
 
     // TODO: Remove this at the end
-//    println("Centroids - ")
-//    centroids.foreach(println)
-//    println("*****")
+    //    println("Centroids - ")
+    //    centroids.foreach(println)
+    //    println("*****")
 
     var prevCentroids = Vector[Seq[Double]]()
 
@@ -161,8 +161,8 @@ object KMeansSequential {
       })
 
       // TODO: Remove this at the end
-//      println("----- Map")
-//      centroidMap.foreach(println)
+      //      println("----- Map")
+      //      centroidMap.foreach(println)
 
       // Recalculate centroids
       prevCentroids = centroids
@@ -185,8 +185,8 @@ object KMeansSequential {
       }
 
       // TODO: Remove this at the end
-//      println("------ New centroid list")
-//      centroids.foreach(println)
+      //      println("------ New centroid list")
+      //      centroids.foreach(println)
       println("****** Iteration ends")
     }
 

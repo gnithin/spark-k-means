@@ -137,15 +137,14 @@ object KMeansSequential {
     //    println("*****")
 
     var prevCentroids = Vector[Seq[Double]]()
-
     var centroidMap: Map[Seq[Double], Vector[(String, Seq[Double])]] = Map()
 
     var iterations = 0
+    var startTime = System.nanoTime
 
     // Loop till convergence (centroids do not change or max-iterations reached)
     while (!areCentroidsEqual(centroids, prevCentroids) && iterations < MAX_ITERATIONS) {
       iterations += 1
-      val startTime = System.nanoTime
 
       // Reset the map
       centroidMap = Map()
@@ -200,6 +199,9 @@ object KMeansSequential {
       //      println("------ New centroid list")
       //      centroids.foreach(println)
       println(s"****** Iteration $iterations ends (Took $loopDuration seconds)")
+
+      // Starting the timer since we want to capture the time taken for the while comparison as well!
+      startTime = System.nanoTime
     }
     println(s"Num iterations $iterations for k - $k")
 

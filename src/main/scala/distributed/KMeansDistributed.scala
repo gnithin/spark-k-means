@@ -46,14 +46,13 @@ object KMeansDistributed {
   }
 
   /**
-   * TODO: Fix Doc
-   * This method returns the best centroid for a given data point. The best centroid for any given
-   * data point is the centroid which has the closest distance to the data point. Here the distance
-   * from the given data point is computed as the Euclidean distance.
+   * This method returns the closes centroid for a given document vector. The best centroid for any given
+   * document vector is the centroid that is most similar to the passed document vector. This similarity
+   * is computed using the cosine similarity function.
    *
-   * @param dataPoint The given data point. In this case it's an XY coordinate.
-   * @param centers   The list of available centroids, to which the dataPoint needs to be assigned.
-   * @return The best centroid for a given dataPoint as an XY coordinate.
+   * @param documentVector   The given document vector. Its a text document represented as a sequence of numbers computed using tf.Idf of the words.
+   * @param currentCentroids The list of available centroids, to which the document vector needs to be assigned.
+   * @return The best centroid for a given document vector
    * */
   def closestCentroid(documentVector: Seq[Double], currentCentroids: Vector[Seq[Double]]): Seq[Double] = {
     var closestDistance = Double.PositiveInfinity
@@ -103,11 +102,6 @@ object KMeansDistributed {
       // update the centroids for next iteration based on the prepared results
       previousCentroids = currentCentroids
       currentCentroids = getUpdatedCentroids(resultRDD)
-      println("Iteration " + currentIteration + " completed")
-      println("Previous centroids")
-      println(previousCentroids)
-      print("New centroids")
-      println(currentCentroids)
     }
     resultRDD
   }
@@ -115,24 +109,18 @@ object KMeansDistributed {
   def getUpdatedCentroids(intermediateResults: RDD[(Seq[Double], Vector[(String, Seq[Double])])]): Vector[Seq[Double]] = {
     var updatedCentroids = Vector[Seq[Double]]()
     val lengthOfDocumentVectors = intermediateResults.first()._1.length
-    println("length of doc vecs " + lengthOfDocumentVectors)
     intermediateResults.map(centroidVectorToDocumentVectors => centroidVectorToDocumentVectors._2)
       .collect()
       .foreach(documentVectors => {
         var avgCentroid = Vector.fill[Double](lengthOfDocumentVectors)(0.0)
         val documentVectorList = documentVectors.map(documentVectors => documentVectors._2)
         val numberOfDocuments = documentVectorList.length
-        println ("number of documents " + numberOfDocuments)
 
         documentVectorList.foreach(documentVector => {
           avgCentroid = avgCentroid.zip(documentVector).map(value => value._1 + value._2)
         })
         avgCentroid = avgCentroid.map(centroidValue => centroidValue / numberOfDocuments)
-        println("average centroid")
-        println(avgCentroid)
         updatedCentroids = updatedCentroids :+ avgCentroid
-        println("updated centroids")
-        println(updatedCentroids)
       })
     updatedCentroids
   }

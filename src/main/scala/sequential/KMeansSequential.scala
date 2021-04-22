@@ -187,7 +187,7 @@ object KMeansSequential {
       // TODO: Remove this at the end
       //      println("------ New centroid list")
       //      centroids.foreach(println)
-      println("****** Iteration ends")
+      println(s"****** Iteration $iterations ends")
     }
 
     println(s"Num iterations $iterations for k - $k")

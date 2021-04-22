@@ -23,11 +23,14 @@ hdfs.output=output
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
 aws.bucket.name=$(PRIVATE_AWS_BUCKET_NAME)
-aws.input=input
-aws.output=output
+aws.input=$(PRIVATE_AWS_RUN_INPUT)
+aws.output=$(PRIVATE_AWS_RUN_OUTPUT)
 aws.log.dir=log
 aws.num.nodes=1
 aws.instance.type=m3.xlarge
+local.input=$(PRIVATE_AWS_RUN_INPUT)
+local.output=$(PRIVATE_AWS_RUN_OUTPUT)
+local.log=log
 # -----------------------------------------------------------
 
 # Compiles code and builds jar (with dependencies).
@@ -139,6 +142,8 @@ aws: jar upload-app-aws delete-output-aws
 download-output-aws: clean-local-output
 	mkdir ${local.output}
 	aws s3 sync s3://${aws.bucket.name}/${aws.output} ${local.output}
+	mkdir ${local.log}
+	aws s3 sync s3://${aws.bucket.name}/${aws.log.dir} ${local.log}
 
 # Change to standalone mode.
 switch-standalone:

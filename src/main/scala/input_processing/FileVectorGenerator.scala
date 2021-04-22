@@ -7,6 +7,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
 object FileVectorGenerator {
+  val HASHING_TF_NUM_FEATURES = 100
+
   def generate_vector(inputFilePath: String, spark: SparkSession): RDD[(String, Seq[Double])] = {
     val inputRDD = parse_input(spark.sparkContext, inputFilePath)
 
@@ -29,7 +31,7 @@ object FileVectorGenerator {
 
     // TODO: Think about the ideal number of features. It should be the number of words upto a limit (if the number is too big)
     val hashingTF = new HashingTF()
-      .setInputCol("filtered_words").setOutputCol("rawFeatures").setNumFeatures(50)
+      .setInputCol("filtered_words").setOutputCol("rawFeatures").setNumFeatures(HASHING_TF_NUM_FEATURES)
     val featurizedData = hashingTF.transform(filteredWords)
 
     val idf = new IDF().setInputCol("rawFeatures").setOutputCol("features")

@@ -47,7 +47,16 @@ object KMeansSequential {
     val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
 
     // Call kmeans on every entry in the config file
-    val kValWithClustersPair = kValues.map(k => (k, kMeans(k, broadcastedData.value)))
+    val kValWithClustersPair = kValues.map(k => {
+      val res = kMeans(k, broadcastedData.value)
+      var clusters = List[List[String]]()
+      res._2.foreach { case (_, docVectorList) =>
+        clusters = clusters :+ docVectorList.map(v => v._1).toList
+      }
+      (k, clusters.map(
+        x => "(" + x.mkString(",") + ")"
+      ).mkString(","))
+    })
 
     // Write output to file
     kValWithClustersPair.saveAsTextFile(outputPath)

@@ -25,12 +25,11 @@ object KMeansDistributed {
 
     logger.info("***************Preparing Data*************");
     val documentVectorRDD = FileVectorGenerator.generate_vector(args(1), spark)
+    // try to persist this so that its avoided being sent from all nodes in each kmeans iteration
+    documentVectorRDD.cache();
 
     // Assumption the number of initial centers will be a relatively very small integer
-    val initialCenterRowIds = spark.sparkContext.textFile(args(0))
-      .map(rowId => rowId.toInt)
-      .collect()
-      .toList
+    val initialCenterRowIds = spark.sparkContext.textFile(args(0)).collect().toList
 
     // generate internal TF.IDF representation for rows provided by the user to be used as centroids
     val initialCentroids = findTfIdfCentroidRepresentation(initialCenterRowIds, documentVectorRDD)
@@ -77,11 +76,11 @@ object KMeansDistributed {
    * @param vectorRDD The Pair RDD that contains key value pair of custom generated Row ID & TF.IDF representation of that row.
    * @return A vector containing Tf.IDF representation for each row ID.
    * */
-  def findTfIdfCentroidRepresentation(rowIds: List[Int], vectorRDD: RDD[(String, Seq[Double])]): Vector[Seq[Double]] = {
-    val vectorTfIdf = vectorRDD.filter(rowIdToTfIdf => rowIds.contains(rowIdToTfIdf._1.split("--")(1).toInt))
+  def findTfIdfCentroidRepresentation(rowIds: List[String], vectorRDD: RDD[(String, Seq[Double])]): Vector[Seq[Double]] = {
+    // IDs in RDD are in the following format - movie_posts--10127--2
+    val vectorTfIdf = vectorRDD.filter(rowIdToTfIdf => rowIds.contains(rowIdToTfIdf._1))
       .map(rowIdToTfIdf => rowIdToTfIdf._2)
       .collect().toVector
-
     vectorTfIdf
   }
 
@@ -102,6 +101,7 @@ object KMeansDistributed {
       // update the centroids for next iteration based on the prepared results
       previousCentroids = currentCentroids
       currentCentroids = getUpdatedCentroids(resultRDD)
+      println("Iteration " + currentIteration + " completed")
     }
     resultRDD
   }

@@ -192,7 +192,6 @@ object KMeansSequential {
       //      centroids.foreach(println)
       println(s"****** Iteration $iterations ends (Took $loopDuration seconds)")
     }
-
     println(s"Num iterations $iterations for k - $k")
 
     (calculateSSE(centroidMap), centroidMap)

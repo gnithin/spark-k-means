@@ -14,6 +14,7 @@ import sequential.KMeansSequential.areCentroidsEqual
 object KMeansDistributed {
 
   val MAX_ITERATIONS = 100 // to prevent long programs - for convergence
+
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
     if (args.length != 4) {
@@ -85,6 +86,15 @@ object KMeansDistributed {
     vectorTfIdf
   }
 
+  /**
+   * The actual algorithm that runs iterative k-means on the input data. The iterations continue till either the MAX_ITERATIONS are reached
+   * or the centroids converge. The convergence of centroid is governed by another method that is defined in KMeansSequential file.
+   *
+   * @param inputData    The input pair RDD that contains the documents as pairs of document ID and their tf.idf vectors.
+   * @param centroids    The initial centroids to which these documents need te assigned.
+   * @param sparkSession The current spark session. This parameter is used to access the Spark context.
+   * @return A pair RDD of document vectors of centroids against a list of documents that 'belong' to those centroids.
+   * */
   def distributedKMeans(inputData: RDD[(String, Seq[Double])], centroids: Vector[Seq[Double]], sparkSession: SparkSession): RDD[(Seq[Double], Vector[(String, Seq[Double])])] = {
     var previousCentroids = Vector[Seq[Double]]() // initially empty - so runs at least once
     var currentCentroids = centroids
@@ -108,6 +118,16 @@ object KMeansDistributed {
     resultRDD
   }
 
+  /**
+   * This method is used to get the updated centroids for use in the next iteration of the kmeans.
+   * The new centroids are calculated by computing simple avergaes of all features of the document
+   * vectors in the current centroid.
+   *
+   * @param intermediateResults A mapping of document vectors of current centroids and the documents
+   *                            clustered with those centroids.
+   * @return A Vector containing updated centroids to which the documents must be re-assigned in the
+   *         next iteration.
+   * */
   def getUpdatedCentroids(intermediateResults: RDD[(Seq[Double], Vector[(String, Seq[Double])])]): Vector[Seq[Double]] = {
     var updatedCentroids = Vector[Seq[Double]]()
     val lengthOfDocumentVectors = intermediateResults.first()._1.length

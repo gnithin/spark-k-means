@@ -52,15 +52,40 @@ object KMeansSequential {
     - We partition using the index since that will be different for all values (multiple k values can be the same)
     - We use a custom-partitioner since the default partitioner is not always uniform and in some cases produces a skew.
      */
-    val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
+    val kValues = configFiles
+      .map(line => {
+        // Parse for optional initial-centroids
+        // The format is
+        // k|id1,id2,id3
+        // The "|id1,id2,id3" part is optional
+        var initialCentroids = Vector[String]()
+        var kVal = 0
+        if (line.contains("|")) {
+          // Parse the optional lise of centroids
+          val components = line.split("""\|""")
+          kVal = Integer.parseInt(components.head.trim())
+          initialCentroids = components.last
+            .split(",")
+            .map(c => c.trim())
+            .filter(c => c.length > 0)
+            .toVector
+
+        } else {
+          kVal = Integer.parseInt(line.trim())
+        }
+
+        (kVal, initialCentroids)
+      })
       .zipWithIndex()
       .map(k => (k._2, k._1))
       .partitionBy(new CustomSequentialKInputPartitioner(NUM_PARTITIONS))
 
     // Call kmeans on every entry in the config file
     val kValWithClustersPair = kValues.map(kValue => {
-      val k = kValue._2
-      val res = kMeans(k, broadcastedData.value)
+      val k = kValue._2._1
+      val initialCentroids = kValue._2._2
+
+      val res = kMeans(k, initialCentroids, broadcastedData.value)
       var clusters = List[List[String]]()
       res._2.foreach { case (_, docVectorList) =>
         clusters = clusters :+ docVectorList.map(v => v._1).toList
@@ -132,17 +157,20 @@ object KMeansSequential {
     true
   }
 
-  def kMeans(k: Int, inputData: Map[String, Seq[Double]]): (Double, Map[Seq[Double], Vector[(String, Seq[Double])]]) = {
-    // Get random centroids
-    // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
-    // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
-    var centroids = scala.util.Random.shuffle(Vector.range(0, inputData.size))
-      .take(k)
-      .map(randomIndex => {
-        val randomKey = inputData.keySet.toList(randomIndex)
-        inputData(randomKey)
-      })
+  def kMeans(k: Int, centroidIds: Vector[String], inputData: Map[String, Seq[Double]]): (Double, Map[Seq[Double], Vector[(String, Seq[Double])]]) = {
+    var initialCentroidIds = centroidIds
 
+    // Get random centroids if centroidIds is empty
+    if (initialCentroidIds.isEmpty){
+      // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
+      // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
+      initialCentroidIds = scala.util.Random.shuffle(Vector.range(0, inputData.size))
+        .take(k)
+        .map(randomIndex => inputData.keySet.toList(randomIndex))
+    }
+
+    // NOTE: Purpose-fully not handling when id is invalid. I'd rather it fail and stop execution than being handled
+    var centroids = initialCentroidIds.map(id => inputData(id))
     var prevCentroids = Vector[Seq[Double]]()
     var centroidMap: Map[Seq[Double], Vector[(String, Seq[Double])]] = Map()
 

@@ -2,6 +2,9 @@ package sequential
 
 import org.apache.spark.Partitioner
 
+/*
+A custom partitioner that is the simplest form of a hash-partitioner
+ */
 class CustomSequentialKInputPartitioner(numberOfPartitions: Int) extends Partitioner {
   override def numPartitions: Int = numberOfPartitions
 

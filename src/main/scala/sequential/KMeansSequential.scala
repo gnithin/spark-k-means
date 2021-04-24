@@ -51,6 +51,7 @@ object KMeansSequential {
     - The zip with index essentially adds an index to every entry
     - Then we flip the pair-rdd, so that the index is key
     - We partition using the index since that will be different for all values (multiple k values can be the same)
+    - We use a custom-partitioner since the default partitioner is not always uniform and in some cases produces a skew.
      */
     val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
       .zipWithIndex()

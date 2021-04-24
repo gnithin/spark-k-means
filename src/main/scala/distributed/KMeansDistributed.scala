@@ -4,6 +4,7 @@ import input_processing.FileVectorGenerator
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
+import sequential.KMeansSequential.areCentroidsEqual
 
 /**
  * This object runs the KMeans algorithm on a given set of initial centroids in a distributed mode,
@@ -12,6 +13,7 @@ import org.apache.spark.sql.SparkSession
  * */
 object KMeansDistributed {
 
+  val MAX_ITERATIONS = 100 // to prevent long programs - for convergence
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
     if (args.length != 4) {
@@ -85,14 +87,13 @@ object KMeansDistributed {
   }
 
   def distributedKMeans(inputData: RDD[(String, Seq[Double])], centroids: Vector[Seq[Double]], sparkSession: SparkSession): RDD[(Seq[Double], Vector[(String, Seq[Double])])] = {
-    val maxIterations = 100; // to prevent long programs - for convergence
     var previousCentroids = Vector[Seq[Double]]() // initially empty - so runs at least once
     var currentCentroids = centroids
     var currentIteration = 0;
     var resultRDD: RDD[(Seq[Double], Vector[(String, Seq[Double])])] = sparkSession.sparkContext.emptyRDD
 
     // run k means till either convergence is reached or max iterations are reached
-    while (!(previousCentroids == currentCentroids) && currentIteration < maxIterations) {
+    while (!areCentroidsEqual(currentCentroids, previousCentroids) && currentIteration < MAX_ITERATIONS) {
       currentIteration += 1
       // prepare intermediate result for this iteration
       resultRDD = inputData.map(rowIdToDocVector => (closestCentroid(rowIdToDocVector._2, currentCentroids), Vector((rowIdToDocVector._1, rowIdToDocVector._2))))

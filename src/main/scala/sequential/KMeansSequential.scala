@@ -9,8 +9,10 @@ import org.apache.spark.sql.SparkSession
 import scala.collection.Map
 
 object KMeansSequential {
-  val DATA_DIR = "data";
-  val CONFIG_DIR = "configuration";
+  val DATA_DIR = "data"
+  val CONFIG_DIR = "configuration"
+  val THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES = 100
+  val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.001
 
   // TODO: Think about the correct entry
   val MAX_ITERATIONS = 100
@@ -64,6 +66,35 @@ object KMeansSequential {
     }.sum
   }
 
+  def areCentroidsEqual(centroids: Vector[Seq[Double]], prevCentroids: Vector[Seq[Double]]): Boolean = {
+    val numFeatures = centroids.head.length
+
+    if (numFeatures < THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES) {
+      println("Performing hard-convergence")
+      return centroids == prevCentroids
+    }
+
+    // Comparison for convergence for big centroid entries (soft-convergence)
+    println("Performing soft-convergence")
+    if (centroids.length != prevCentroids.length){
+      return false
+    }
+
+    for (i <- centroids.indices) {
+      val lVector = centroids(i)
+      val rVector = prevCentroids(i)
+
+      for (j <- lVector.indices) {
+        val diff = Math.abs(lVector(j) - rVector(j))
+        if (diff > THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF) {
+          return false
+        }
+      }
+    }
+
+    true
+  }
+
   def kMeans(k: Int, inputData: Map[String, Seq[Double]]): (Double, Map[Seq[Double], Vector[(String, Seq[Double])]]) = {
     // Get random centroids
     // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
@@ -76,9 +107,9 @@ object KMeansSequential {
       })
 
     // TODO: Remove this at the end
-//    println("Centroids - ")
-//    centroids.foreach(println)
-//    println("*****")
+    //    println("Centroids - ")
+    //    centroids.foreach(println)
+    //    println("*****")
 
     var prevCentroids = Vector[Seq[Double]]()
 
@@ -86,9 +117,8 @@ object KMeansSequential {
 
     var iterations = 0
 
-    // TODO: Fix the comparison for convergence
     // Loop till convergence (centroids do not change or max-iterations reached)
-    while (!(centroids == prevCentroids) && iterations < MAX_ITERATIONS) {
+    while (!areCentroidsEqual(centroids, prevCentroids) && iterations < MAX_ITERATIONS) {
       iterations += 1
 
       // Reset the map
@@ -115,8 +145,8 @@ object KMeansSequential {
       })
 
       // TODO: Remove this at the end
-//      println("----- Map")
-//      centroidMap.foreach(println)
+      //      println("----- Map")
+      //      centroidMap.foreach(println)
 
       // Recalculate centroids
       prevCentroids = centroids
@@ -139,8 +169,8 @@ object KMeansSequential {
       }
 
       // TODO: Remove this at the end
-//      println("------ New centroid list")
-//      centroids.foreach(println)
+      //      println("------ New centroid list")
+      //      centroids.foreach(println)
       println("****** Iteration ends")
     }
 

@@ -94,6 +94,7 @@ object KMeansDistributed {
 
     // run k means till either convergence is reached or max iterations are reached
     while (!areCentroidsEqual(currentCentroids, previousCentroids) && currentIteration < MAX_ITERATIONS) {
+      val startTime = System.nanoTime
       currentIteration += 1
       // prepare intermediate result for this iteration
       resultRDD = inputData.map(rowIdToDocVector => (closestCentroid(rowIdToDocVector._2, currentCentroids), Vector((rowIdToDocVector._1, rowIdToDocVector._2))))
@@ -102,7 +103,8 @@ object KMeansDistributed {
       // update the centroids for next iteration based on the prepared results
       previousCentroids = currentCentroids
       currentCentroids = getUpdatedCentroids(resultRDD)
-      println("Iteration " + currentIteration + " completed")
+      val iterationTime = (System.nanoTime - startTime) / 1e9d
+      println(s"Iteration ${currentIteration} completed, took $iterationTime seconds")
     }
     resultRDD
   }

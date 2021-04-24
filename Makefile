@@ -26,6 +26,7 @@ hdfs.output=output
 aws.emr.release=emr-6.2.0
 aws.bucket.name=$(PRIVATE_AWS_BUCKET_NAME)
 aws.input=$(PRIVATE_AWS_RUN_INPUT)
+aws.distributed.input_data=$(PRIVATE_AWS_RUN_INPUT_DATA)
 aws.distributed.input_centers=distributed_input/centers.txt
 aws.output=$(PRIVATE_AWS_RUN_OUTPUT)
 aws.log.dir=log
@@ -149,7 +150,7 @@ aws-distributed: jar upload-app-aws delete-output-aws
 		--release-label ${aws.emr.release} \
 		--instance-groups '[{"InstanceCount":${aws.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
 	    --applications Name=Hadoop Name=Spark \
-		--steps Type=CUSTOM_JAR,Name="${app.name}",Jar="command-runner.jar",ActionOnFailure=TERMINATE_CLUSTER,Args=["spark-submit","--deploy-mode","cluster","--class","${job.distributed.name}","s3://${aws.bucket.name}/${jar.name}","s3://${aws.bucket.name}/${aws.distributed.input_centers}","s3://${aws.bucket.name}/${aws.input}","s3://${aws.bucket.name}/${aws.output}","${aws.master}"] \
+		--steps Type=CUSTOM_JAR,Name="${app.name}",Jar="command-runner.jar",ActionOnFailure=TERMINATE_CLUSTER,Args=["spark-submit","--deploy-mode","cluster","--class","${job.distributed.name}","s3://${aws.bucket.name}/${jar.name}","s3://${aws.bucket.name}/${aws.distributed.input_centers}","s3://${aws.bucket.name}/${aws.distributed.input_data}","s3://${aws.bucket.name}/${aws.output}","${aws.master}"] \
 		--log-uri s3://${aws.bucket.name}/${aws.log.dir} \
 		--use-default-roles \
 		--enable-debugging \

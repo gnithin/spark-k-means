@@ -14,7 +14,6 @@ object KMeansSequential {
   val THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES = 49
   val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.01
 
-  // TODO: Think about the correct entry
   val MAX_ITERATIONS = 200
 
   def main(args: Array[String]): Unit = {
@@ -144,11 +143,6 @@ object KMeansSequential {
         inputData(randomKey)
       })
 
-    // TODO: Remove this at the end
-    //    println("Centroids - ")
-    //    centroids.foreach(println)
-    //    println("*****")
-
     var prevCentroids = Vector[Seq[Double]]()
     var centroidMap: Map[Seq[Double], Vector[(String, Seq[Double])]] = Map()
 
@@ -182,10 +176,6 @@ object KMeansSequential {
         }
       })
 
-      // TODO: Remove this at the end
-      //      println("----- Map")
-      //      centroidMap.foreach(println)
-
       // Recalculate centroids
       prevCentroids = centroids
       centroids = Vector[Seq[Double]]()
@@ -208,9 +198,6 @@ object KMeansSequential {
 
       val loopDuration = (System.nanoTime - startTime) / 1e9d
 
-      // TODO: Remove this at the end
-      //      println("------ New centroid list")
-      //      centroids.foreach(println)
       println(s"****** Iteration $iterations ends (Took $loopDuration seconds) for k=$k")
 
       // Starting the timer since we want to capture the time taken for the while comparison as well!

@@ -9,6 +9,7 @@ app.name=K Means
 jar.name=kmeans.jar
 maven.jar.name=kmeans-1.0.jar
 job.sequential.name=sequential.KMeansSequential
+job.name=$(PRIVATE_AWS_JOB_NAME)
 job.distributed.name=distributed.KMeansDistributed
 local.master=local[4]
 local.distributed.input_centers=distributed_input/centers.txt
@@ -21,6 +22,7 @@ hdfs.user.name=joe
 hdfs.input=input
 hdfs.output=output
 # AWS EMR Execution
+# aws.emr.release=emr-5.17.0
 aws.emr.release=emr-6.2.0
 aws.bucket.name=$(PRIVATE_AWS_BUCKET_NAME)
 aws.input=$(PRIVATE_AWS_RUN_INPUT)

@@ -11,11 +11,11 @@ import scala.collection.Map
 object KMeansSequential {
   val DATA_DIR = "data"
   val CONFIG_DIR = "configuration"
-  val THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES = 100
-  val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.001
+  val THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES = 49
+  val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.01
 
   // TODO: Think about the correct entry
-  val MAX_ITERATIONS = 100
+  val MAX_ITERATIONS = 200
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -44,10 +44,31 @@ object KMeansSequential {
 
     // Process config files
     val configFiles = sc.textFile(configPath)
+
+    val numPartitions = 4
+    /*
+    Partition the k-values uniformly so that k-means is uniformly distributed across nodes.
+    - The zip with index essentially adds an index to every entry
+    - Then we flip the pair-rdd, so that the index is key
+    - We partition using the index since that will be different for all values (multiple k values can be the same)
+     */
     val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
+      .zipWithIndex()
+      .map(k => (k._2, k._1))
+      .partitionBy(new CustomSequentialKInputPartitioner(numPartitions))
 
     // Call kmeans on every entry in the config file
-    val kValWithClustersPair = kValues.map(k => (k, kMeans(k, broadcastedData.value)))
+    val kValWithClustersPair = kValues.map(kValue => {
+      val k = kValue._2
+      val res = kMeans(k, broadcastedData.value)
+      var clusters = List[List[String]]()
+      res._2.foreach { case (_, docVectorList) =>
+        clusters = clusters :+ docVectorList.map(v => v._1).toList
+      }
+      (k, clusters.map(
+        x => "(" + x.mkString(",") + ")"
+      ).mkString(","))
+    })
 
     // Write output to file
     kValWithClustersPair.saveAsTextFile(outputPath)
@@ -70,13 +91,13 @@ object KMeansSequential {
     val numFeatures = centroids.head.length
 
     if (numFeatures < THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES) {
-      println("Performing hard-convergence")
+      // println("Performing hard-convergence")
       return centroids == prevCentroids
     }
 
     // Comparison for convergence for big centroid entries (soft-convergence)
-    println("Performing soft-convergence")
-    if (centroids.length != prevCentroids.length){
+    // println("Performing soft-convergence")
+    if (centroids.length != prevCentroids.length) {
       return false
     }
 
@@ -112,10 +133,10 @@ object KMeansSequential {
     //    println("*****")
 
     var prevCentroids = Vector[Seq[Double]]()
-
     var centroidMap: Map[Seq[Double], Vector[(String, Seq[Double])]] = Map()
 
     var iterations = 0
+    var startTime = System.nanoTime
 
     // Loop till convergence (centroids do not change or max-iterations reached)
     while (!areCentroidsEqual(centroids, prevCentroids) && iterations < MAX_ITERATIONS) {
@@ -168,14 +189,19 @@ object KMeansSequential {
         }
       }
 
+      val loopDuration = (System.nanoTime - startTime) / 1e9d
+
       // TODO: Remove this at the end
       //      println("------ New centroid list")
       //      centroids.foreach(println)
-      println("****** Iteration ends")
-    }
+      println(s"****** Iteration $iterations ends (Took $loopDuration seconds) for k=$k")
 
+      // Starting the timer since we want to capture the time taken for the while comparison as well!
+      startTime = System.nanoTime
+    }
     println(s"Num iterations $iterations for k - $k")
 
     (calculateSSE(centroidMap), centroidMap)
   }
 }
+

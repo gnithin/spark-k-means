@@ -15,6 +15,7 @@ object KMeansSequential {
   val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.01
 
   val MAX_ITERATIONS = 200
+  val NUM_PARTITIONS = 4
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -44,7 +45,6 @@ object KMeansSequential {
     // Process config files
     val configFiles = sc.textFile(configPath)
 
-    val numPartitions = 4
     /*
     Partition the k-values uniformly so that k-means is uniformly distributed across nodes.
     - The zip with index essentially adds an index to every entry
@@ -55,7 +55,7 @@ object KMeansSequential {
     val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
       .zipWithIndex()
       .map(k => (k._2, k._1))
-      .partitionBy(new CustomSequentialKInputPartitioner(numPartitions))
+      .partitionBy(new CustomSequentialKInputPartitioner(NUM_PARTITIONS))
 
     // Call kmeans on every entry in the config file
     val kValWithClustersPair = kValues.map(kValue => {

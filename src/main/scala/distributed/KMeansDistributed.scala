@@ -41,9 +41,8 @@ object KMeansDistributed {
     logger.info("***************K Means Distributed*************");
     val resultRDD = distributedKMeans(documentVectorRDD, initialCentroids, spark)
 
-    // write the new centers back to the file - we use coalesce here so that we get output on a single file
-    // this operation is performed only once on a relatively small list (based on number of entries)
-    resultRDD.coalesce(1).saveAsTextFile(args(2))
+    // write the new centers back to the file
+    resultRDD.saveAsTextFile(args(2))
   }
 
   /**

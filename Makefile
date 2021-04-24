@@ -9,6 +9,7 @@ app.name=K Means
 jar.name=kmeans.jar
 maven.jar.name=kmeans-1.0.jar
 job.sequential.name=sequential.KMeansSequential
+job.name=$(PRIVATE_AWS_JOB_NAME)
 job.distributed.name=distributed.KMeansDistributed
 local.master=local[4]
 local.distributed.input_centers=distributed_input/centers.txt
@@ -23,11 +24,14 @@ hdfs.output=output
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
 aws.bucket.name=$(PRIVATE_AWS_BUCKET_NAME)
-aws.input=input
-aws.output=output
+aws.input=$(PRIVATE_AWS_RUN_INPUT)
+aws.output=$(PRIVATE_AWS_RUN_OUTPUT)
 aws.log.dir=log
-aws.num.nodes=1
-aws.instance.type=m3.xlarge
+aws.num.nodes=4
+aws.instance.type=m4.large
+local.input=$(PRIVATE_AWS_RUN_INPUT)
+local.output=$(PRIVATE_AWS_RUN_OUTPUT)
+local.log=log
 # -----------------------------------------------------------
 
 # Compiles code and builds jar (with dependencies).
@@ -139,6 +143,8 @@ aws: jar upload-app-aws delete-output-aws
 download-output-aws: clean-local-output
 	mkdir ${local.output}
 	aws s3 sync s3://${aws.bucket.name}/${aws.output} ${local.output}
+	mkdir ${local.log}
+	aws s3 sync s3://${aws.bucket.name}/${aws.log.dir} ${local.log}
 
 # Change to standalone mode.
 switch-standalone:

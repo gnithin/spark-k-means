@@ -7,6 +7,11 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
 object FileVectorGenerator {
+  /*
+  The number of features is relied on by the "hashing-trick" that HashingTF performs. Essentially, this value should be close to the number of words in the entire data-set. But that will be a problem for representing the data, since it'll be sparse. Since for k-Means, we explicitly do not use SparseVector (makes computing centroid-averages hard), we opt to set this value statically. A range of 50-100 is expected here.
+   */
+  val HASHING_TF_NUM_FEATURES = 50
+
   def generate_vector(inputFilePath: String, spark: SparkSession): RDD[(String, Seq[Double])] = {
     val inputRDD = parse_input(spark.sparkContext, inputFilePath)
 
@@ -27,9 +32,8 @@ object FileVectorGenerator {
 //    filteredWords.show()
 //    println("*" * 50)
 
-    // TODO: Think about the ideal number of features. It should be the number of words upto a limit (if the number is too big)
     val hashingTF = new HashingTF()
-      .setInputCol("filtered_words").setOutputCol("rawFeatures").setNumFeatures(50)
+      .setInputCol("filtered_words").setOutputCol("rawFeatures").setNumFeatures(HASHING_TF_NUM_FEATURES)
     val featurizedData = hashingTF.transform(filteredWords)
 
     val idf = new IDF().setInputCol("rawFeatures").setOutputCol("features")

@@ -14,8 +14,8 @@ object KMeansSequential {
   val THRESHOLD_SOFT_CONVERGENCE_NUM_FEATURES = 49
   val THRESHOLD_SOFT_CONVERGENCE_MAX_DIFF = 0.01
 
-  // TODO: Think about the correct entry
   val MAX_ITERATIONS = 200
+  val NUM_PARTITIONS = 4
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -45,22 +45,47 @@ object KMeansSequential {
     // Process config files
     val configFiles = sc.textFile(configPath)
 
-    val numPartitions = 4
     /*
     Partition the k-values uniformly so that k-means is uniformly distributed across nodes.
     - The zip with index essentially adds an index to every entry
     - Then we flip the pair-rdd, so that the index is key
     - We partition using the index since that will be different for all values (multiple k values can be the same)
+    - We use a custom-partitioner since the default partitioner is not always uniform and in some cases produces a skew.
      */
-    val kValues = configFiles.map(line => Integer.parseInt(line.trim()))
+    val kValues = configFiles
+      .map(line => {
+        // Parse for optional initial-centroids
+        // The format is
+        // k|id1,id2,id3
+        // The "|id1,id2,id3" part is optional
+        var initialCentroids = Vector[String]()
+        var kVal = 0
+        if (line.contains("|")) {
+          // Parse the optional lise of centroids
+          val components = line.split("""\|""")
+          kVal = Integer.parseInt(components.head.trim())
+          initialCentroids = components.last
+            .split(",")
+            .map(c => c.trim())
+            .filter(c => c.length > 0)
+            .toVector
+
+        } else {
+          kVal = Integer.parseInt(line.trim())
+        }
+
+        (kVal, initialCentroids)
+      })
       .zipWithIndex()
       .map(k => (k._2, k._1))
-      .partitionBy(new CustomSequentialKInputPartitioner(numPartitions))
+      .partitionBy(new CustomSequentialKInputPartitioner(NUM_PARTITIONS))
 
     // Call kmeans on every entry in the config file
     val kValWithClustersPair = kValues.map(kValue => {
-      val k = kValue._2
-      val res = kMeans(k, broadcastedData.value)
+      val k = kValue._2._1
+      val initialCentroids = kValue._2._2
+
+      val res = kMeans(k, initialCentroids, broadcastedData.value)
       var clusters = List[List[String]]()
       res._2.foreach { case (_, docVectorList) =>
         clusters = clusters :+ docVectorList.map(v => v._1).toList
@@ -116,22 +141,20 @@ object KMeansSequential {
     true
   }
 
-  def kMeans(k: Int, inputData: Map[String, Seq[Double]]): (Double, Map[Seq[Double], Vector[(String, Seq[Double])]]) = {
-    // Get random centroids
-    // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
-    // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
-    var centroids = scala.util.Random.shuffle(Vector.range(0, inputData.size))
-      .take(k)
-      .map(randomIndex => {
-        val randomKey = inputData.keySet.toList(randomIndex)
-        inputData(randomKey)
-      })
+  def kMeans(k: Int, centroidIds: Vector[String], inputData: Map[String, Seq[Double]]): (Double, Map[Seq[Double], Vector[(String, Seq[Double])]]) = {
+    var initialCentroidIds = centroidIds
 
-    // TODO: Remove this at the end
-    //    println("Centroids - ")
-    //    centroids.foreach(println)
-    //    println("*****")
+    // Get random centroids if centroidIds is empty
+    if (initialCentroidIds.isEmpty){
+      // NOTE: Sampling some entries without any repeats. This will be sufficient if inputData.length
+      // is not super huge. Then again it is assumed that it can fit in memory, so we should be fine.
+      initialCentroidIds = scala.util.Random.shuffle(Vector.range(0, inputData.size))
+        .take(k)
+        .map(randomIndex => inputData.keySet.toList(randomIndex))
+    }
 
+    // NOTE: Purpose-fully not handling when id is invalid. I'd rather it fail and stop execution than being handled
+    var centroids = initialCentroidIds.map(id => inputData(id))
     var prevCentroids = Vector[Seq[Double]]()
     var centroidMap: Map[Seq[Double], Vector[(String, Seq[Double])]] = Map()
 
@@ -165,10 +188,6 @@ object KMeansSequential {
         }
       })
 
-      // TODO: Remove this at the end
-      //      println("----- Map")
-      //      centroidMap.foreach(println)
-
       // Recalculate centroids
       prevCentroids = centroids
       centroids = Vector[Seq[Double]]()
@@ -191,9 +210,6 @@ object KMeansSequential {
 
       val loopDuration = (System.nanoTime - startTime) / 1e9d
 
-      // TODO: Remove this at the end
-      //      println("------ New centroid list")
-      //      centroids.foreach(println)
       println(s"****** Iteration $iterations ends (Took $loopDuration seconds) for k=$k")
 
       // Starting the timer since we want to capture the time taken for the while comparison as well!

@@ -28,10 +28,6 @@ object FileVectorGenerator {
       .setOutputCol("filtered_words")
     val filteredWords = remover.transform(wordsData)
 
-    // TODO: Remove this
-//    filteredWords.show()
-//    println("*" * 50)
-
     val hashingTF = new HashingTF()
       .setInputCol("filtered_words").setOutputCol("rawFeatures").setNumFeatures(HASHING_TF_NUM_FEATURES)
     val featurizedData = hashingTF.transform(filteredWords)

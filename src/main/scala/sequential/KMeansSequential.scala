@@ -74,22 +74,6 @@ object KMeansSequential {
     kValWithClustersPair.saveAsTextFile(outputPath)
   }
 
-  def calculateDistance(point: Seq[Double], center: Seq[Double]): Double = {
-    // Cosine similarity
-    // cos(theta) = A.B / |A|*|B|
-    val dotProduct = point.zip(center).
-      map(entry => entry._1 * entry._2).sum
-
-    val pointMagnitude = Math.pow(point.map(e => Math.pow(e, 2)).sum, 0.5)
-    val centerMagnitude = Math.pow(center.map(e => Math.pow(e, 2)).sum, 0.5)
-    val magnitude = pointMagnitude * centerMagnitude
-
-    // Bigger the cos value, more similar they are. So just inverting this
-    // so that it fits into the distance idea, where a smaller distance would mean
-    // they are closer together.
-    1.0 - (dotProduct / magnitude)
-  }
-
   def calculateSSE(kMeansMap: Map[Seq[Double], Vector[(String, Seq[Double])]]): Double = {
     /*
     SSE = sum of all (square of distance between document-vector and it's centroid)
@@ -98,7 +82,7 @@ object KMeansSequential {
       case (centroid, documentsList) =>
         documentsList.map {
           case (_, documentVector) =>
-            Math.pow(calculateDistance(centroid, documentVector), 2)
+            Math.pow(FileVectorGenerator.calculateDistance(centroid, documentVector), 2)
         }.sum
     }.sum
   }
@@ -166,7 +150,7 @@ object KMeansSequential {
         val documentVector = document._2
 
         val minCentroidDistancePair = centroids.map(centroid => {
-          (centroid, calculateDistance(centroid, documentVector))
+          (centroid, FileVectorGenerator.calculateDistance(centroid, documentVector))
         }).minBy(_._2)
         val minCentroid = minCentroidDistancePair._1
 

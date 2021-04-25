@@ -13,7 +13,7 @@ job.name=$(PRIVATE_AWS_JOB_NAME)
 job.distributed.name=distributed.KMeansDistributed
 local.master=local[4]
 local.distributed.input_centers=distributed_input/centers.txt
-local.distributed.input_data=distributed_input/sample-points.txt
+local.distributed.input_data=distributed_input/data
 local.distributed.output=distributed_output
 local.sequential.input=sequential_input
 local.sequential.output=sequential_output
@@ -22,12 +22,16 @@ hdfs.user.name=joe
 hdfs.input=input
 hdfs.output=output
 # AWS EMR Execution
-aws.emr.release=emr-5.17.0
+# aws.emr.release=emr-5.17.0
+aws.emr.release=emr-6.2.0
 aws.bucket.name=$(PRIVATE_AWS_BUCKET_NAME)
 aws.input=$(PRIVATE_AWS_RUN_INPUT)
+aws.distributed.input_data=$(PRIVATE_AWS_RUN_INPUT_DATA)
+aws.distributed.input_centers=distributed_input/centers.txt
 aws.output=$(PRIVATE_AWS_RUN_OUTPUT)
 aws.log.dir=log
-aws.num.nodes=4
+aws.num.nodes=8
+aws.master=yarn
 aws.instance.type=m4.large
 local.input=$(PRIVATE_AWS_RUN_INPUT)
 local.output=$(PRIVATE_AWS_RUN_OUTPUT)
@@ -138,7 +142,21 @@ aws: jar upload-app-aws delete-output-aws
 		--use-default-roles \
 		--enable-debugging \
 		--auto-terminate
-		
+
+# Main EMR launch.
+aws-distributed: jar upload-app-aws delete-output-aws
+	aws emr create-cluster \
+		--name "K Means Distributed" \
+		--release-label ${aws.emr.release} \
+		--instance-groups '[{"InstanceCount":${aws.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
+	    --applications Name=Hadoop Name=Spark \
+		--steps Type=CUSTOM_JAR,Name="${app.name}",Jar="command-runner.jar",ActionOnFailure=TERMINATE_CLUSTER,Args=["spark-submit","--deploy-mode","cluster","--class","${job.distributed.name}","s3://${aws.bucket.name}/${jar.name}","s3://${aws.bucket.name}/${aws.distributed.input_centers}","s3://${aws.bucket.name}/${aws.distributed.input_data}","s3://${aws.bucket.name}/${aws.output}","${aws.master}"] \
+		--log-uri s3://${aws.bucket.name}/${aws.log.dir} \
+		--use-default-roles \
+		--enable-debugging \
+		--auto-terminate
+
+
 # Download output from S3.
 download-output-aws: clean-local-output
 	mkdir ${local.output}

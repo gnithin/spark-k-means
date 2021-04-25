@@ -11,4 +11,6 @@ sequential_output
 distributed_output
 .DS_Store
 raw-input
-log
+
+distributed_input/data
+log/

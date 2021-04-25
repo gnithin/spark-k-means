@@ -60,3 +60,7 @@ Notes
 ----------
 1. You may need to set certain variables in a .env file. The instructions to setup this file are mentioned in the 3rd point under the *Environment* section.
 2. The parsing logic of input data is specific to the the *Posts* xml files found in the stackexchange dataset. The program will not work with other kind of data.
+3. Make sure that the different posts.xml have a unique-name since it'll be used as an id in the code. The ids in the xml files always start from 1 (they are not universal), 
+   so this helps the program identify different entries.
+4. Make sure that the posts.xml don't contain any BOM characters. Use a [tool like this](https://github.com/alastairruhm/utfbom-remove) to remove them. 
+   Alternatively, you may also use the vim editor to remove BOM characters. To do this open file in vim editor, use `:set nobomb` and save & quit file using `:wq`. 

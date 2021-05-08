@@ -1,7 +1,5 @@
-# CS6240 Final Project - K-Means
+# K-Means in Spark
 K-Means implementation to cluster documents from the [StackExchange Dataset](https://archive.org/details/stackexchange).
-
-Spring 2021
 
 Code authors
 -----------
